@@ -23,3 +23,24 @@ if (not database_exists):
   create_schema(sql_conn)
 
 sql_c = sql_conn.cursor()
+
+
+# Setup listener for RDIF to obtain login details
+from asyncore import file_dispatcher, loop
+from evdev import InputDevice, categorize, ecodes
+dev = InputDevice('/dev/input/event8')
+
+class InputDeviceDispatcher(file_dispatcher):
+  def __init__(self, device):
+    self.device = device
+    file_dispatcher.__init__(self, device)
+
+  def recv(self, ign=None):
+    return self.device.read()
+
+  def handle_read(self):
+    for event in self.recv():
+      print(repr(event))
+
+InputDeviceDispatcher(dev)
+loop()
