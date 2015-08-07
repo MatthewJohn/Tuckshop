@@ -54,12 +54,11 @@ import BaseHTTPServer
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def getFile(self, content_type, base_dir, file_name):
-      self.send_header('Content-type', content_type)
-
       file_name = '%s/%s' % (base_dir, file_name)
 
       if (file_name and os.path.isfile(file_name)):
         self.send_response(200)
+        self.send_header('Content-type', content_type)
         self.end_headers()
         self.includeFile(file_name)
       else:
