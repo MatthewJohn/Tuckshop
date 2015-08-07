@@ -8,11 +8,15 @@ SQL_FILE = 'tuckshopaccountant.db'
 def create_schema(sql_connection):
   sql_cursor = sql_connection.cursor()
   sql_cursor.execute('''CREATE TABLE credit
-             (uid text PRIMARY KEY, credit real, rfid_token text)''')
+             (uid text PRIMARY KEY, credit real)''')
+  sql_cursor.execute('''CREATE TABLE token
+             (uid text, token text)''')
   sql_cursor.execute('''CREATE TABLE inventory
              (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real)''')
   sql_cursor.execute('''CREATE TABLE purchase_history
              (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, uid text, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+  sql_cursor.execute('''CREATE TABLE admin
+             (uid text)''')
   sql_connection.commit()
 
 database_exists = (os.path.isfile(SQL_FILE))
@@ -28,7 +32,7 @@ sql_c = sql_conn.cursor()
 # Setup listener for RDIF to obtain login details
 from asyncore import file_dispatcher, loop
 from evdev import InputDevice, categorize, ecodes
-dev = InputDevice('/dev/input/event8')
+#dev = InputDevice('/dev/input/event8')
 
 class InputDeviceDispatcher(file_dispatcher):
   def __init__(self, device):
@@ -42,5 +46,21 @@ class InputDeviceDispatcher(file_dispatcher):
     for event in self.recv():
       print(repr(event))
 
-InputDeviceDispatcher(dev)
-loop()
+#InputDeviceDispatcher(dev)
+#loop()
+
+import BaseHTTPServer
+
+class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type','text/html')
+        self.end_headers()
+        self.wfile.write('help me!!%s' % self.path)
+        return
+
+
+server_address = ('', 8000)
+httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
+httpd.serve_forever()
