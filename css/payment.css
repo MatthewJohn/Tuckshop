@@ -1,0 +1,15 @@
+#picture{
+    background-image: url(http://www.charitydynamics.co.uk/charity-mailings-images/marketing-for-charities.jpg);
+    height:100%;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position-x:50%;
+}
+
+#central{
+    height:100%;
+}
+
+.position-central{
+    margin-top:45%;
+}
