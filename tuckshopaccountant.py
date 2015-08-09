@@ -52,6 +52,12 @@ sql_c = sql_conn.cursor()
 import BaseHTTPServer
 import jinja2
 
+from jinja2 import FileSystemLoader
+from jinja2.environment import Environment
+
+env = Environment()
+env.loader = FileSystemLoader('./templates/')
+
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def getFile(self, content_type, base_dir, file_name):
@@ -61,16 +67,16 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', content_type)
         self.end_headers()
-        self.includeFile(file_name)
+        self.wfile.write(self.includeFile(file_name))
       else:
         self.send_response(401)
 
     def includeFile(self, file_name):
       if (file_name and os.path.isfile(file_name)):
         with open(file_name) as fh:
-          self.wfile.write(fh.read())
+          return fh.read()
       else:
-        self.wfile.write('Cannot file find!')
+        return 'Cannot file find!'
 
     def do_GET(self):
         # Get file
@@ -83,11 +89,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif (base_dir == 'js'):
           self.getFile('text/javascript', 'js', file_name)
 
-        elif (base_dir == ''):
+        elif (base_dir == '' or base_dir == 'credit'):
           self.send_response(200)
           self.send_header('Content-type', 'text/html')
-          self.end_headers()  
-          self.includeFile('payment.html')
+          self.end_headers()
+
+          template = env.get_template('credit.html')
+          self.wfile.write(template.render(page_name='Credit'))
 
         else:
             self.end_headers()
