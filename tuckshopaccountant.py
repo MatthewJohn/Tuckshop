@@ -30,26 +30,27 @@ sql_c = sql_conn.cursor()
 
 
 # Setup listener for RDIF to obtain login details
-from asyncore import file_dispatcher, loop
-from evdev import InputDevice, categorize, ecodes
-#dev = InputDevice('/dev/input/event8')
+# from asyncore import file_dispatcher, loop
+# from evdev import InputDevice, categorize, ecodes
+# dev = InputDevice('/dev/input/event8')
 
-class InputDeviceDispatcher(file_dispatcher):
-  def __init__(self, device):
-    self.device = device
-    file_dispatcher.__init__(self, device)
+# class InputDeviceDispatcher(file_dispatcher):
+#   def __init__(self, device):
+#     self.device = device
+#     file_dispatcher.__init__(self, device)
 
-  def recv(self, ign=None):
-    return self.device.read()
+#   def recv(self, ign=None):
+#     return self.device.read()
 
-  def handle_read(self):
-    for event in self.recv():
-      print(repr(event))
+#   def handle_read(self):
+#     for event in self.recv():
+#       print(repr(event))
 
 #InputDeviceDispatcher(dev)
 #loop()
 
 import BaseHTTPServer
+import jinja2
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
@@ -85,7 +86,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif (base_dir == ''):
           self.send_response(200)
           self.send_header('Content-type', 'text/html')
-          self.end_headers()
+          self.end_headers()  
           self.includeFile('payment.html')
 
         else:
