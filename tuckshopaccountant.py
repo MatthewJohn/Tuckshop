@@ -77,6 +77,7 @@ class Auth(object):
 
   @staticmethod
   def login(username, password):
+
     ldap_obj = ldap.initialize('ldap://portal-production:389')
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     try:
@@ -95,9 +96,6 @@ class Auth(object):
       return True
     else:
       return False
-
-  def logout(request):
-    pass
 
 
 class User(object):
@@ -314,9 +312,12 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     if ('action' in variables):
       action = variables['action']
-      if (action == 'login' and 'password' in variables and 'username' in variables):
-        if (not self.login(variables['username'], variables['password'])):
-          post_vars['auth_failure'] = True
+
+      # Handle login POST requests
+      if (action == 'login'):
+        post_vars['auth_failure'] = True
+        if ('password' in variables and 'username' in variables and self.login(variables['username'], variables['password'])):
+          post_vars['auth_failure'] = False
 
       if (action == 'pay' and 'amount' in variables):
         self.getUserObject().removeCredit(float(variables['amount']))
