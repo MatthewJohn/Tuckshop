@@ -58,6 +58,16 @@ from jinja2.environment import Environment
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
+class User(object):
+  def __init__(self, username='mc'):
+    self.username = username
+
+  def getName(self):
+    return 'Lloyd'
+
+  def getCredit(self):
+    return 135
+
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def getFile(self, content_type, base_dir, file_name):
@@ -93,9 +103,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           self.send_response(200)
           self.send_header('Content-type', 'text/html')
           self.end_headers()
-
+          user = User()
           template = env.get_template('credit.html')
-          self.wfile.write(template.render(page_name='Credit'))
+          self.wfile.write(template.render(page_name='Credit', user=user))
 
         else:
             self.end_headers()
