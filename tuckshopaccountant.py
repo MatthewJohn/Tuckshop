@@ -3,6 +3,14 @@
 import sqlite3
 import os
 
+import ldap
+
+import BaseHTTPServer
+import jinja2
+
+from jinja2 import FileSystemLoader
+from jinja2.environment import Environment
+
 SQL_FILE = 'tuckshopaccountant.db'
 
 def create_schema(sql_connection):
@@ -49,21 +57,54 @@ sql_c = sql_conn.cursor()
 #InputDeviceDispatcher(dev)
 #loop()
 
-import BaseHTTPServer
-import jinja2
-
-from jinja2 import FileSystemLoader
-from jinja2.environment import Environment
-
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
+class Auth(object):
+  def login(request, username, password):
+    ldap_obj = ldap.initialize('ldap://portal-production:389')
+    dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
+    try:
+      ldap_obj.simple_bind_s(dn, password)
+    except:
+      return False
+    return User(username)
+
+  def logout(request):
+    pass
+
 class User(object):
-  def __init__(self, username='mc'):
+  def __init__(self, username):
     self.username = username
 
+    # Obtain information from LDAP
+    ldap_obj = ldap.initialize('ldap://portal-production:389')
+    dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
+    ldap_obj.simple_bind_s()
+    res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
+                            'uid=%s' % username, ['mail', 'displayName'])
+
+    if (not res):
+      raise Exception('User \'%s\' does not exist' % username)
+
+    self.dn = res[0][0]
+    self.display_name = res[0][1]['displayName']
+    self.email = res[0][1]['mail']
+
+    # Determine if user exists in user table and create if not
+    user_count = sql_c.execute('SELECT count(*) FROM credit WHERE uid=?', self.username)
+    if (not user_count):
+      sql_c.execute('INSERT INTO credit(uid, credit) VALUES(?, 0.00)', username)
+
+  @staticmethod
+  def getCurrentUser(request):
+    return User(Auth.getCurrentUser(request))
+
   def getName(self):
-    return 'Lloyd'
+    return self.display_name
+
+  def getUsername():
+    return self.username
 
   def getCredit(self):
     return 135
@@ -75,6 +116,8 @@ class User(object):
     return 135 - amount
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+  sessions = {}
 
   def getFile(self, content_type, base_dir, file_name):
     file_name = '%s/%s' % (base_dir, file_name)
@@ -127,7 +170,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     self.do_GET()
     return
 
+if (__name__ == '__main__'):
 
-server_address = ('', 8000)
-httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
-httpd.serve_forever()
+  server_address = ('', 8000)
+  httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
+  httpd.serve_forever()
