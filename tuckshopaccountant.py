@@ -11,6 +11,14 @@ import jinja2
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
 
+import cgi
+
+import Cookie
+import datetime
+import random
+import sha
+import time
+
 SQL_FILE = 'tuckshopaccountant.db'
 
 def create_schema(sql_connection):
@@ -60,10 +68,11 @@ sql_c = sql_conn.cursor()
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
+sessions = {}
+
 class Auth(object):
-  def __init__(self, username, password, request):
+  def __init__(self, username, password):
     self.login(username, password)
-    self.request = request
     self.username = username
 
   @staticmethod
@@ -74,6 +83,7 @@ class Auth(object):
       ldap_obj.simple_bind_s(dn, password)
     except:
       return False
+    return True
 
   def getUsername(self):
     return self.username
@@ -128,7 +138,7 @@ class User(object):
   def getEmail(self):
     return self.email
 
-  def getCredit(self, auth):
+  def getCredit(self):
     credit = sql_c.execute('''SELECT credit FROM credit WHERE uid=?''', (self.getUsername(), )).fetchone()
     return credit[0]
 
@@ -157,7 +167,42 @@ class User(object):
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
-  sessions = {}
+  def getSession(self, send_header=False, clear_cookie=False):
+    cookie = Cookie.SimpleCookie()
+    cookie_found = False
+    if ('Cookie' in self.headers):
+      cookie.load(self.headers.getheader('Cookie'))
+      if ('sid' in cookie and cookie['sid']):
+        sid = cookie['sid'].value
+        cookie_found = True
+
+    if (not cookie_found):
+      sid = sha.new(repr(time.time())).hexdigest()
+      cookie['sid'] = sid
+      cookie['sid']['expires'] = 24 * 60 * 60
+      if (send_header):
+        self.send_header('Set-Cookie', cookie.output())
+
+    if (sid not in sessions):
+      sessions[sid] = {}
+
+    if (clear_cookie):
+      del sessions[sid]
+      cookie['sid'] = None
+      self.send_header('Set-Cookie', cookie.output())
+
+    return sid
+
+  def getSessionVar(self, var):
+    session_var = self.getSession()
+
+    if (var in sessions[session_var]):
+      return sessions[session_var][var]
+    else:
+      return None
+
+  def setSessionVar(self, var, value):
+    sessions[self.getSession()][var] = value
 
   def getFile(self, content_type, base_dir, file_name):
     file_name = '%s/%s' % (base_dir, file_name)
@@ -177,38 +222,115 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     else:
       return 'Cannot file find!'
 
-  def do_GET(self):
-      # Get file
-      split_path = self.path.split('/')
-      base_dir = split_path[1] if (len(split_path) > 1) else ''
-      file_name = split_path[2] if len(split_path) == 3 else ''
+  def sendLogin(self):
+    template = env.get_template('login.html')
+    if ('auth_failure' in self.post_vars and self.post_vars['auth_failure']):
+      error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
+    else:
+      error = None
+    self.wfile.write(template.render(page_name='Login', warning=error))
 
-      if (base_dir == 'css'):
-        self.getFile('text/css', 'css', file_name)
-      elif (base_dir == 'js'):
-        self.getFile('text/javascript', 'js', file_name)
+  def isLoggedIn(self):
+    if (self.getSessionVar('username')):
+      return True
+    else:
+      return False
 
-      elif (base_dir == '' or base_dir == 'credit'):
+  def getCurrentUsername(self):
+    if (self.isLoggedIn()):
+      return self.getSessionVar('username')
+    else:
+      return None
+
+  def getUserObject(self):
+    if (self.isLoggedIn()):
+      return User(self.getCurrentUsername())
+
+  def getCurrentAuthObject(self):
+    if (self.isLoggedIn()):
+      return Auth(self.getCurrentUsername(), self.getSessionVar['password'])
+
+  def do_GET(self, post_vars={}):
+    # Get file
+    self.post_vars = post_vars
+    split_path = self.path.split('/')
+    base_dir = split_path[1] if (len(split_path) > 1) else ''
+    file_name = split_path[2] if len(split_path) == 3 else ''
+
+    if (base_dir == 'css'):
+      self.getFile('text/css', 'css', file_name)
+    elif (base_dir == 'js'):
+      self.getFile('text/javascript', 'js', file_name)
+
+    elif (base_dir == 'logout'):
+      self.send_response(200)
+      self.getSession(clear_cookie=True)
+      self.end_headers()
+      self.sendLogin()
+
+    elif (base_dir in ['', 'credit', 'logout']):
+      self.getSession()
+      if ('set_response' not in post_vars):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        user = User()
+      if (not self.isLoggedIn()):
+        self.sendLogin()
+      elif (base_dir == '' or base_dir == 'credit'):
         template = env.get_template('credit.html')
-        self.wfile.write(template.render(page_name='Credit', user=user))
+        self.wfile.write(template.render(page_name='Credit', user=self.getUserObject()))
 
-      else:
-        self.end_headers()
-        self.wfile.write('help me!!%s' % self.path)
-      return
+    else:
+      self.send_response(404)
+      self.send_header('Content-type', 'text/html')
+      self.end_headers()
+      self.wfile.write('help me!!%s' % self.path)
+
+    return
+
+  def getPostVariables(self):
+    form = cgi.FieldStorage(
+      fp=self.rfile,
+      headers=self.headers,
+      environ={'REQUEST_METHOD':'POST',
+               'CONTENT_TYPE':self.headers['Content-Type'],
+              })
+    variables = {}
+    for field in form.keys():
+      variables[field] = form[field].value
+    return variables
 
   def do_POST(self):
+    self.send_response(200)
+    self.getSession(True)
+
+    post_vars = {}
     # Get file
     split_path = self.path.split('/')
     base_dir = split_path[1] if (len(split_path) > 1) else ''
     file_name = split_path[2] if len(split_path) == 3 else ''
 
-    self.do_GET()
+    variables = self.getPostVariables()
+
+    if ('action' in variables):
+      action = variables['action']
+      if (action == 'login' and 'password' in variables and 'username' in variables):
+        if (not self.login(variables['username'], variables['password'])):
+          post_vars['auth_failure'] = True
+
+      if (action == 'pay' and 'amount' in variables):
+        self.getUserObject().removeCredit(float(variables['amount']))
+
+      self.do_GET(post_vars=post_vars)
     return
+
+  def login(self, username, password):
+    if (Auth.login(username, password)):
+      self.setSessionVar('username', username)
+      self.setSessionVar('password', password)
+      return True
+    else:
+      return False
 
 if (__name__ == '__main__'):
 

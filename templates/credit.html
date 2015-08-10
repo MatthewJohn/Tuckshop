@@ -4,14 +4,15 @@
                         <div class="col-md-12 position-central">
                             <h1>Tuck Shop</h1>
                             <p>Welcome to the tuck shop {{ user.getName() }}. You currently have </p>
-                            <h2 style="text-align:center">&pound;{{ user.getCredit() }}</h2>
+                            <h2 style="text-align:center">{{ user.getCreditString() }}</h2>
                             <p>in your account. </p>
-                            <form>
+                            <form action="/credit" method="post">
+                                <input type="hidden" name="action" value="pay" />
                                 <div class="form-group">
                                     <label for="money">How much would you like to pay?</label>
                                     <div class="input-group">
                                         <div class="input-group-addon">&pound;</div>
-                                        <input type="text" class="form-control" id="money" placeholder="0.2">
+                                        <input type="text" class="form-control" id="money" name="amount" placeholder="0.2">
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-default">Submit</button>
