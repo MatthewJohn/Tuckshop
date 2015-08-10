@@ -22,14 +22,14 @@ def create_schema(sql_connection):
   sql_cursor.execute('''CREATE TABLE inventory
              (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real)''')
   sql_cursor.execute('''CREATE TABLE purchase_history
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, uid text, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
   sql_cursor.execute('''CREATE TABLE admin
              (uid text)''')
   sql_connection.commit()
 
 database_exists = (os.path.isfile(SQL_FILE))
 
-sql_conn = sqlite3.connect(SQL_FILE)
+sql_conn = sqlite3.connect(SQL_FILE, isolation_level='IMMEDIATE')
 
 if (not database_exists):
   create_schema(sql_conn)
@@ -92,9 +92,11 @@ class User(object):
     self.email = res[0][1]['mail']
 
     # Determine if user exists in user table and create if not
-    user_count = sql_c.execute('SELECT count(*) FROM credit WHERE uid=?', self.username)
+    user_count = sql_c.execute('''SELECT count(*) FROM credit WHERE uid=?''', (self.getUsername(), ))
+    user_count = user_count.fetchone()[0]
     if (not user_count):
-      sql_c.execute('INSERT INTO credit(uid, credit) VALUES(?, 0.00)', username)
+      sql_c.execute('INSERT INTO credit(uid, credit) VALUES(?, 0.00)', (self.getUsername(), ))
+      sql_conn.commit()
 
   @staticmethod
   def getCurrentUser(request):
@@ -103,17 +105,28 @@ class User(object):
   def getName(self):
     return self.display_name
 
-  def getUsername():
+  def getUsername(self):
     return self.username
 
   def getCredit(self):
-    return 135
+    credit = sql_c.execute('''SELECT credit FROM credit WHERE uid=?''', (self.getUsername(), )).fetchone()
+    return credit[0]
 
   def addCredit(self, amount):
-    return 135 + amount
+    amount = float("%.2f" % amount)
+    sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
+    credit = self.getCredit() + amount
+    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
+    sql_conn.commit()
+    return self.getCredit()
 
   def removeCredit(self, amount):
-    return 135 - amount
+    amount = float("%.2f" % amount)
+    sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, True))
+    credit = self.getCredit() - amount
+    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
+    sql_conn.commit()
+    return self.getCredit()
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
