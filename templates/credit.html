@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+                    <div class="row" id="central">
+                        <div class="col-md-12 position-central">
+                            <h1>Tuck Shop</h1>
+                            <p>Welcome to the tuck shop Lloyd. You currently have </p>
+                            <h2 style="text-align:center">&pound;5.60</h2>
+                            <p>in your account. </p>
+                            <form>
+                                <div class="form-group">
+                                    <label for="money">How much would you like to pay?</label>
+                                    <div class="input-group">
+                                        <div class="input-group-addon">&pound;</div>
+                                        <input type="text" class="form-control" id="money" placeholder="0.2">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-default">Submit</button>
+                            </form>
+                        </div>
+                    </div>
+{% endblock %}
