@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+                    <div class="row" id="central">
+                        <div class="col-md-12 position-central">
+                            <table class="table">
+                                <tr><th>Date</th><th>Item</th><th>Amount</th><th>Credit</th></tr>
+                                    {% if transaction_history %}
+                                        {% for transaction in transaction_history %}
+                                            <tr>
+                                                <td>{{ transaction['timestamp'] }}</td>
+                                                <td>{{ transaction['inventory_name'] }}</td>
+                                                <td>{{ transaction['amount'] }}</td>
+                                                <td>{{ transaction['total'] }}</td>
+                                            </tr>
+                                    {% endfor %}
+                                </table>
+                            {% else %}
+                                </table>
+                                <div class="alert alert-info" role="alert">There are no transactions available...</div>
+                            {% endif %}
+                            {% if page_data %}
+                                <nav>
+                                  <ul class="pagination">
+                                    {% for page_info in page_data %}
+                                        <li class="{{ page_info[0] }}"><a href="{{ page_info[1] }}">{{ page_info[2] }}</a></li>
+                                    {% endfor %}
+                                  </ul>
+                                </nav>
+                            {% endif %}
+                        </div>
+                    </div>
+{% endblock %}

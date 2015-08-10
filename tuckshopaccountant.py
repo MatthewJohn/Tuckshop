@@ -17,8 +17,11 @@ import Cookie
 import datetime
 import random
 import sha
+import math
 import time
 
+TRANSACTION_PAGE_SIZE = 10
+TOTAL_PAGE_DISPLAY = 7
 SQL_FILE = 'tuckshopaccountant.db'
 
 def create_schema(sql_connection):
@@ -28,16 +31,16 @@ def create_schema(sql_connection):
   sql_cursor.execute('''CREATE TABLE token
              (uid text, token text)''')
   sql_cursor.execute('''CREATE TABLE inventory
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real)''')
-  sql_cursor.execute('''CREATE TABLE purchase_history
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real, name text)''')
+  sql_cursor.execute('''CREATE TABLE transaction_history
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, tran_ts timestamp DEFAULT CURRENT_TIMESTAMP)''')
   sql_cursor.execute('''CREATE TABLE admin
              (uid text)''')
   sql_connection.commit()
 
 database_exists = (os.path.isfile(SQL_FILE))
 
-sql_conn = sqlite3.connect(SQL_FILE, isolation_level='IMMEDIATE')
+sql_conn = sqlite3.connect(SQL_FILE, isolation_level='IMMEDIATE', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
 if (not database_exists):
   create_schema(sql_conn)
@@ -141,7 +144,11 @@ class User(object):
     return credit[0]
 
   def getCreditString(self):
-    credit = self.getCredit()
+    credit = User.getMoneyString(self.getCredit())
+    return credit
+
+  @staticmethod
+  def getMoneyString(credit):
     text_color = 'green' if credit >= 0 else 'red'
 
     if (credit <= -1):
@@ -161,7 +168,7 @@ class User(object):
     amount = float("%.2f" % amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
-    sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
+    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
     credit = self.getCredit() + amount
     sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
     sql_conn.commit()
@@ -171,11 +178,56 @@ class User(object):
     amount = float("%.2f" % amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
-    sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, True))
+    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''',
+                  (self.getUsername(), amount, True))
     credit = self.getCredit() - amount
-    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
+    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''',
+                  (credit, self.getUsername()))
     sql_conn.commit()
     return self.getCredit()
+
+  def getInventory(self):
+    inv_res = sql_c.execute('''SELECT id, name FROM inventory''')
+    inventory = {}
+    for item in inv_res:
+      inventory[inv_res[0]] = inv_res[1]
+
+    return inventory
+
+
+  def getTransactionHistory(self, date_from=datetime.datetime.fromtimestamp(0),
+                            date_to=datetime.datetime.now()):
+    inventory = self.getInventory()
+    transactions = []
+    th_res = sql_c.execute('''SELECT id, amount, debit, tran_ts as "ts [timestamp]", inventory_id FROM
+                              transaction_history WHERE uid=? ORDER BY tran_ts ASC''',
+                           (self.getUsername(),))
+
+    credit = 0
+    for transaction_row in th_res:
+      transaction = {}
+      transaction['id'] = transaction_row[0]
+      transaction['amount'] = transaction_row[1]
+      transaction['debit'] = transaction_row[2]
+      transaction['timestamp'] = transaction_row[3]
+      transaction['inventory_id'] = transaction_row[4]
+      transaction['inventory_name'] = inventory[transaction_row[4]] if transaction_row[4] in inventory else ''
+
+      if (transaction['debit']):
+        credit -= transaction_row[1]
+        transaction['amount'] = 0 - transaction['amount']
+      else:
+        credit += transaction_row[1]
+
+      transaction['amount'] = User.getMoneyString(transaction['amount'])
+
+      transaction['total'] = User.getMoneyString(credit)
+
+      transaction_dt = transaction['timestamp']
+      if (transaction_dt >= date_from and transaction_dt <= date_to):
+        transactions.append(transaction)
+
+    return transactions
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
@@ -240,7 +292,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
     else:
       error = None
-    self.wfile.write(template.render(page_name='Login', warning=error))
+    self.wfile.write(template.render(page_name='Login', warning=error, url=self.path))
 
   def isLoggedIn(self):
     if (self.getSessionVar('username')):
@@ -271,6 +323,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     if (base_dir == 'css'):
       self.getFile('text/css', 'css', file_name)
+
     elif (base_dir == 'js'):
       self.getFile('text/javascript', 'js', file_name)
 
@@ -280,17 +333,38 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.end_headers()
       self.sendLogin()
 
-    elif (base_dir in ['', 'credit', 'logout']):
+    elif (base_dir in ['', 'credit', 'logout', 'history']):
       self.getSession()
+
       if ('set_response' not in post_vars):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
+
       if (not self.isLoggedIn()):
         self.sendLogin()
+
       elif (base_dir == '' or base_dir == 'credit'):
         template = env.get_template('credit.html')
         self.wfile.write(template.render(page_name='Credit', user=self.getUserObject()))
+
+      elif (base_dir == 'history'):
+        template = env.get_template('history.html')
+        transaction_history = self.getUserObject().getTransactionHistory()
+        transaction_history.reverse()
+
+        if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
+          page_number = int(split_path[2]) if len(split_path) == 3 else 1
+          total_pages = int(math.ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
+          page_data = self.getPageData(page_number, total_pages, '/history/%s')
+          array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
+          array_end = page_number * TRANSACTION_PAGE_SIZE
+          transaction_history = transaction_history[array_start:array_end]
+
+        else:
+          page_data = []
+        self.wfile.write(template.render(page_name='History', transaction_history=transaction_history,
+                                         page_data=page_data))
 
     else:
       self.send_response(404)
@@ -299,6 +373,19 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.wfile.write('Unknown URL: %s' % self.path)
 
     return
+
+  def getPageData(self, current_page, total_pages, url_template):
+    if (total_pages <= TOTAL_PAGE_DISPLAY):
+      page_range = range(1, total_pages + 1)
+    else:
+      pages_up_down = int(math.ceil((TOTAL_PAGE_DISPLAY - 1) / 2))
+      page_range = range(current_page - pages_up_down, current_page + pages_up_downs + 1)
+
+    page_data = []
+    for page_numer in page_range:
+      page_data.append(['active' if (page_numer == current_page) else '', url_template % page_numer, page_numer])
+
+    return page_data
 
   def getPostVariables(self):
     form = cgi.FieldStorage(

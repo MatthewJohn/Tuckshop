@@ -5,7 +5,7 @@
                             <h1>Tuck Shop</h1>
                             <p>Welcome to the tuck shop</p>
                             {{ warning if warning else '' }}
-                            <form action="/" method="post">
+                            <form action="{{ url }}" method="post">
                                 <input type="hidden" name="action" value="login" />
                                 <div class="form-group">
                                     <label for="username">Username</label>
