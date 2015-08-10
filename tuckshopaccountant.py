@@ -78,7 +78,7 @@ class Auth(object):
   @staticmethod
   def login(username, password):
 
-    ldap_obj = ldap.initialize('ldap://ldap-server:389')
+    ldap_obj = ldap.initialize('ldap://localhost:389')
     dn = 'uid=%s,ou=People,dc=example,dc=com' % username
     try:
       ldap_obj.simple_bind_s(dn, password)
@@ -103,17 +103,17 @@ class User(object):
     self.username = username
 
     # Obtain information from LDAP
-    ldap_obj = ldap.initialize('ldap://ldap-server:389')
+    ldap_obj = ldap.initialize('ldap://localhost:389')
     dn = 'uid=%s,ou=People,dc=example,dc=com' % username
     ldap_obj.simple_bind_s()
     res = ldap_obj.search_s('ou=People,dc=example,dc=com', ldap.SCOPE_ONELEVEL,
-                            'uid=%s' % username, ['mail', 'displayName'])
+                            'uid=%s' % username, ['mail', 'givenName'])
 
     if (not res):
       raise Exception('User \'%s\' does not exist' % username)
 
     self.dn = res[0][0]
-    self.display_name = res[0][1]['displayName'][0]
+    self.display_name = res[0][1]['givenName'][0]
     self.email = res[0][1]['mail'][0]
 
     # Determine if user exists in user table and create if not
@@ -142,13 +142,25 @@ class User(object):
 
   def getCreditString(self):
     credit = self.getCredit()
-    if (credit < 1 and credit > -1):
-      return str(credit * 100) + 'p'
+    text_color = 'green' if credit >= 0 else 'red'
+
+    if (credit <= -1):
+      credit_sign = '-'
+      credit = 0 - credit
     else:
-      return '&pound;%.2f' % credit
+      credit_sign = ''
+
+    if (credit < 1):
+      credit_string = str(int(credit * 100)) + 'p'
+    else:
+      credit_string = '&pound;%.2f' % credit
+
+    return '<font style="color: %s">%s%s</font>' % (text_color, credit_sign, credit_string)
 
   def addCredit(self, amount):
     amount = float("%.2f" % amount)
+    if (amount < 0):
+      raise Exception('Cannot use negative number')
     sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
     credit = self.getCredit() + amount
     sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
@@ -157,6 +169,8 @@ class User(object):
 
   def removeCredit(self, amount):
     amount = float("%.2f" % amount)
+    if (amount < 0):
+      raise Exception('Cannot use negative number')
     sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, True))
     credit = self.getCredit() - amount
     sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
@@ -282,7 +296,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.send_response(404)
       self.send_header('Content-type', 'text/html')
       self.end_headers()
-      self.wfile.write('help me!!%s' % self.path)
+      self.wfile.write('Unknown URL: %s' % self.path)
 
     return
 

@@ -3,7 +3,7 @@
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
                             <h1>Tuck Shop</h1>
-                            <p>Welcome to the tuck shop {{ user.getName() }}. You currently have </p>
+                            <p>Welcome to the tuck shop, {{ user.getName() }}. You currently have </p>
                             <h2 style="text-align:center">{{ user.getCreditString() }}</h2>
                             <p>in your account. </p>
                             <form action="/credit" method="post">
