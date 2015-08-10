@@ -61,17 +61,34 @@ env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
 class Auth(object):
-  def login(request, username, password):
+  def __init__(self, username, password, request):
+    self.login(username, password)
+    self.request = request
+    self.username = username
+
+  @staticmethod
+  def login(username, password):
     ldap_obj = ldap.initialize('ldap://ldap-server:389')
     dn = 'uid=%s,ou=People,dc=example,dc=com' % username
     try:
       ldap_obj.simple_bind_s(dn, password)
     except:
       return False
-    return User(username)
+
+  def getUsername(self):
+    return self.username
+
+  def isAdmin(self):
+    admin_count = sql_c.execute('''SELECT count(*) FROM admin WHERE uid=?''', (self.getUsername(), ))
+    admin_count = user_count.fetchone()[0]
+    if (admin_count):
+      return True
+    else:
+      return False
 
   def logout(request):
     pass
+
 
 class User(object):
   def __init__(self, username):
@@ -88,8 +105,8 @@ class User(object):
       raise Exception('User \'%s\' does not exist' % username)
 
     self.dn = res[0][0]
-    self.display_name = res[0][1]['displayName']
-    self.email = res[0][1]['mail']
+    self.display_name = res[0][1]['displayName'][0]
+    self.email = res[0][1]['mail'][0]
 
     # Determine if user exists in user table and create if not
     user_count = sql_c.execute('''SELECT count(*) FROM credit WHERE uid=?''', (self.getUsername(), ))
@@ -108,9 +125,19 @@ class User(object):
   def getUsername(self):
     return self.username
 
-  def getCredit(self):
+  def getEmail(self):
+    return self.email
+
+  def getCredit(self, auth):
     credit = sql_c.execute('''SELECT credit FROM credit WHERE uid=?''', (self.getUsername(), )).fetchone()
     return credit[0]
+
+  def getCreditString(self):
+    credit = self.getCredit()
+    if (credit < 1 and credit > -1):
+      return str(credit * 100) + 'p'
+    else:
+      return '&pound;%.2f' % credit
 
   def addCredit(self, amount):
     amount = float("%.2f" % amount)
