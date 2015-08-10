@@ -68,49 +68,64 @@ class User(object):
   def getCredit(self):
     return 135
 
+  def addCredit(self, amount):
+    return 135 + amount
+
+  def removeCredit(self, amount):
+    return 135 - amount
+
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
-    def getFile(self, content_type, base_dir, file_name):
-      file_name = '%s/%s' % (base_dir, file_name)
+  def getFile(self, content_type, base_dir, file_name):
+    file_name = '%s/%s' % (base_dir, file_name)
 
-      if (file_name and os.path.isfile(file_name)):
+    if (file_name and os.path.isfile(file_name)):
+      self.send_response(200)
+      self.send_header('Content-type', content_type)
+      self.end_headers()
+      self.wfile.write(self.includeFile(file_name))
+    else:
+      self.send_response(401)
+
+  def includeFile(self, file_name):
+    if (file_name and os.path.isfile(file_name)):
+      with open(file_name) as fh:
+        return fh.read()
+    else:
+      return 'Cannot file find!'
+
+  def do_GET(self):
+      # Get file
+      split_path = self.path.split('/')
+      base_dir = split_path[1] if (len(split_path) > 1) else ''
+      file_name = split_path[2] if len(split_path) == 3 else ''
+
+      if (base_dir == 'css'):
+        self.getFile('text/css', 'css', file_name)
+      elif (base_dir == 'js'):
+        self.getFile('text/javascript', 'js', file_name)
+
+      elif (base_dir == '' or base_dir == 'credit'):
         self.send_response(200)
-        self.send_header('Content-type', content_type)
+        self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(self.includeFile(file_name))
+        user = User()
+        template = env.get_template('credit.html')
+        self.wfile.write(template.render(page_name='Credit', user=user))
+
       else:
-        self.send_response(401)
+        self.end_headers()
+        self.wfile.write('help me!!%s' % self.path)
+      return
 
-    def includeFile(self, file_name):
-      if (file_name and os.path.isfile(file_name)):
-        with open(file_name) as fh:
-          return fh.read()
-      else:
-        return 'Cannot file find!'
+  def do_POST(self):
+    # Get file
+    split_path = self.path.split('/')
+    base_dir = split_path[1] if (len(split_path) > 1) else ''
+    file_name = split_path[2] if len(split_path) == 3 else ''
 
-    def do_GET(self):
-        # Get file
-        split_path = self.path.split('/')
-        base_dir = split_path[1] if (len(split_path) > 1) else ''
-        file_name = split_path[2] if len(split_path) == 3 else ''
-
-        if (base_dir == 'css'):
-          self.getFile('text/css', 'css', file_name)
-        elif (base_dir == 'js'):
-          self.getFile('text/javascript', 'js', file_name)
-
-        elif (base_dir == '' or base_dir == 'credit'):
-          self.send_response(200)
-          self.send_header('Content-type', 'text/html')
-          self.end_headers()
-          user = User()
-          template = env.get_template('credit.html')
-          self.wfile.write(template.render(page_name='Credit', user=user))
-
-        else:
-            self.end_headers()
-            self.wfile.write('help me!!%s' % self.path)
-        return
+    self.do_GET()
+    return
 
 
 server_address = ('', 8000)
