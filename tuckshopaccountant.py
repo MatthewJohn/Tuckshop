@@ -81,7 +81,7 @@ class Auth(object):
   @staticmethod
   def login(username, password):
 
-    ldap_obj = ldap.initialize('ldap://localhost:389')
+    ldap_obj = ldap.initialize('ldap://portal-production:389')
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     try:
       ldap_obj.simple_bind_s(dn, password)
@@ -100,13 +100,21 @@ class Auth(object):
     else:
       return False
 
+class Inventory(object):
+  def __init__(self, item_id):
+    self.id = item_id
+
+  @staticmethod
+  def add(item_id, name, selling_price, cost=None):
+    if (cost is None):
+      cost = selling_price
 
 class User(object):
   def __init__(self, username):
     self.username = username
 
     # Obtain information from LDAP
-    ldap_obj = ldap.initialize('ldap://localhost:389')
+    ldap_obj = ldap.initialize('ldap://portal-production:389')
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     ldap_obj.simple_bind_s()
     res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
