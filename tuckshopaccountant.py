@@ -23,6 +23,7 @@ import time
 TRANSACTION_PAGE_SIZE = 10
 TOTAL_PAGE_DISPLAY = 7
 SQL_FILE = 'tuckshopaccountant.db'
+LDAP_SERVER = 'localhost'
 
 def create_schema(sql_connection):
   sql_cursor = sql_connection.cursor()
@@ -31,7 +32,7 @@ def create_schema(sql_connection):
   sql_cursor.execute('''CREATE TABLE token
              (uid text, token text)''')
   sql_cursor.execute('''CREATE TABLE inventory
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real, name text)''')
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, name text, bardcode_number text, cost real, sale_price real, image_url text)''')
   sql_cursor.execute('''CREATE TABLE transaction_history
              (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, tran_ts timestamp DEFAULT CURRENT_TIMESTAMP)''')
   sql_cursor.execute('''CREATE TABLE admin
@@ -81,7 +82,7 @@ class Auth(object):
   @staticmethod
   def login(username, password):
 
-    ldap_obj = ldap.initialize('ldap://localhost:389')
+    ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     try:
       ldap_obj.simple_bind_s(dn, password)
@@ -100,13 +101,36 @@ class Auth(object):
     else:
       return False
 
+class Inventory(object):
+  def __init__(self, item_id):
+    self.id = item_id
+    self.getDetails()
+
+  @staticmethod
+  def add(name, sale_price, cost=None, image_url=''):
+    if (cost is None):
+      cost = sale_price
+    sql_c('''INSERT INTO inventory(sale_price, cost, name, image_url) VALUES(?, ?, ?, ?)''',
+          (sale_price, cost, name, image_url))
+    new_id = sql_c.lastrowid
+    sql_conn.commit()
+    return Inventory(new_id)
+
+  def getDetails(self):
+    
+
+  def getSalePrice(self):
+    return self.sale_price
+
+  def getCost(self):
+    return self.cost
 
 class User(object):
   def __init__(self, username):
     self.username = username
 
     # Obtain information from LDAP
-    ldap_obj = ldap.initialize('ldap://localhost:389')
+    ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     ldap_obj.simple_bind_s()
     res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
@@ -138,6 +162,17 @@ class User(object):
 
   def getEmail(self):
     return self.email
+
+  def getTokens(self):
+    token_res = sql_c.execute('''SELECT token FROM token WHERE uid=?''', (self.getUsername(),))
+    return [token[0] for token in token_res]
+
+  def addToken(self, token):
+    sql_c.execute('''INSERT INTO token(uid, token) VALUES(?, ?)''', (self.getUsername(), token))
+    sql_conn.commit()
+
+  def removeToken(self, token):
+    sql_c.execute('''DELETE FROM token WHERE uid=? AND token=?''', (self.getUsername(), token))
 
   def getCredit(self):
     credit = sql_c.execute('''SELECT credit FROM credit WHERE uid=?''', (self.getUsername(), )).fetchone()
@@ -174,11 +209,20 @@ class User(object):
     sql_conn.commit()
     return self.getCredit()
 
-  def removeCredit(self, amount):
+  def removeCredit(self, amount=None, inventory_object=None):
+    if (inventory_object):
+      inventory_id = inventory_object.getId()
+      if (not amount):
+        amount = inventory_object.getSalePrice()
+    elif (amount):
+      inventory_id = 0
+    else:
+      raise Exception('Must pass amount or inventory_object')
+
     amount = float("%.2f" % amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
-    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''',
+    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(?, ?, ?, ?)''',
                   (self.getUsername(), amount, True))
     credit = self.getCredit() - amount
     sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''',
@@ -186,18 +230,8 @@ class User(object):
     sql_conn.commit()
     return self.getCredit()
 
-  def getInventory(self):
-    inv_res = sql_c.execute('''SELECT id, name FROM inventory''')
-    inventory = {}
-    for item in inv_res:
-      inventory[inv_res[0]] = inv_res[1]
-
-    return inventory
-
-
   def getTransactionHistory(self, date_from=datetime.datetime.fromtimestamp(0),
                             date_to=datetime.datetime.now()):
-    inventory = self.getInventory()
     transactions = []
     th_res = sql_c.execute('''SELECT id, amount, debit, tran_ts as "ts [timestamp]", inventory_id FROM
                               transaction_history WHERE uid=? ORDER BY tran_ts ASC''',
@@ -211,7 +245,10 @@ class User(object):
       transaction['debit'] = transaction_row[2]
       transaction['timestamp'] = transaction_row[3]
       transaction['inventory_id'] = transaction_row[4]
-      transaction['inventory_name'] = inventory[transaction_row[4]] if transaction_row[4] in inventory else ''
+      if (transaction_row[4]):
+        transaction['inventory_name'] = Inventory(transaction_row[4]).getName()
+      else:
+        transaction['inventory_name'] = ''
 
       if (transaction['debit']):
         credit -= transaction_row[1]
