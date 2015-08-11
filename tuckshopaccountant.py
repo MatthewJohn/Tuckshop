@@ -11,6 +11,17 @@ import jinja2
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
 
+import cgi
+
+import Cookie
+import datetime
+import random
+import sha
+import math
+import time
+
+TRANSACTION_PAGE_SIZE = 10
+TOTAL_PAGE_DISPLAY = 7
 SQL_FILE = 'tuckshopaccountant.db'
 
 def create_schema(sql_connection):
@@ -20,16 +31,16 @@ def create_schema(sql_connection):
   sql_cursor.execute('''CREATE TABLE token
              (uid text, token text)''')
   sql_cursor.execute('''CREATE TABLE inventory
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real)''')
-  sql_cursor.execute('''CREATE TABLE purchase_history
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, bardcode_number text, cost real, name text)''')
+  sql_cursor.execute('''CREATE TABLE transaction_history
+             (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, tran_ts timestamp DEFAULT CURRENT_TIMESTAMP)''')
   sql_cursor.execute('''CREATE TABLE admin
              (uid text)''')
   sql_connection.commit()
 
 database_exists = (os.path.isfile(SQL_FILE))
 
-sql_conn = sqlite3.connect(SQL_FILE, isolation_level='IMMEDIATE')
+sql_conn = sqlite3.connect(SQL_FILE, isolation_level='IMMEDIATE', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
 if (not database_exists):
   create_schema(sql_conn)
@@ -60,20 +71,23 @@ sql_c = sql_conn.cursor()
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
+sessions = {}
+
 class Auth(object):
-  def __init__(self, username, password, request):
+  def __init__(self, username, password):
     self.login(username, password)
-    self.request = request
     self.username = username
 
   @staticmethod
   def login(username, password):
-    ldap_obj = ldap.initialize('ldap://portal-production:389')
+
+    ldap_obj = ldap.initialize('ldap://localhost:389')
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     try:
       ldap_obj.simple_bind_s(dn, password)
     except:
       return False
+    return True
 
   def getUsername(self):
     return self.username
@@ -86,26 +100,23 @@ class Auth(object):
     else:
       return False
 
-  def logout(request):
-    pass
-
 
 class User(object):
   def __init__(self, username):
     self.username = username
 
     # Obtain information from LDAP
-    ldap_obj = ldap.initialize('ldap://portal-production:389')
+    ldap_obj = ldap.initialize('ldap://localhost:389')
     dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % username
     ldap_obj.simple_bind_s()
     res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
-                            'uid=%s' % username, ['mail', 'displayName'])
+                            'uid=%s' % username, ['mail', 'givenName'])
 
     if (not res):
       raise Exception('User \'%s\' does not exist' % username)
 
     self.dn = res[0][0]
-    self.display_name = res[0][1]['displayName'][0]
+    self.display_name = res[0][1]['givenName'][0]
     self.email = res[0][1]['mail'][0]
 
     # Determine if user exists in user table and create if not
@@ -128,20 +139,36 @@ class User(object):
   def getEmail(self):
     return self.email
 
-  def getCredit(self, auth):
+  def getCredit(self):
     credit = sql_c.execute('''SELECT credit FROM credit WHERE uid=?''', (self.getUsername(), )).fetchone()
     return credit[0]
 
   def getCreditString(self):
-    credit = self.getCredit()
-    if (credit < 1 and credit > -1):
-      return str(credit * 100) + 'p'
+    credit = User.getMoneyString(self.getCredit())
+    return credit
+
+  @staticmethod
+  def getMoneyString(credit):
+    text_color = 'green' if credit >= 0 else 'red'
+
+    if (credit <= -1):
+      credit_sign = '-'
+      credit = 0 - credit
     else:
-      return '&pound;%.2f' % credit
+      credit_sign = ''
+
+    if (credit < 1):
+      credit_string = str(int(credit * 100)) + 'p'
+    else:
+      credit_string = '&pound;%.2f' % credit
+
+    return '<font style="color: %s">%s%s</font>' % (text_color, credit_sign, credit_string)
 
   def addCredit(self, amount):
     amount = float("%.2f" % amount)
-    sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
+    if (amount < 0):
+      raise Exception('Cannot use negative number')
+    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
     credit = self.getCredit() + amount
     sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
     sql_conn.commit()
@@ -149,15 +176,97 @@ class User(object):
 
   def removeCredit(self, amount):
     amount = float("%.2f" % amount)
-    sql_c.execute('''INSERT INTO purchase_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, True))
+    if (amount < 0):
+      raise Exception('Cannot use negative number')
+    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''',
+                  (self.getUsername(), amount, True))
     credit = self.getCredit() - amount
-    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
+    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''',
+                  (credit, self.getUsername()))
     sql_conn.commit()
     return self.getCredit()
 
+  def getInventory(self):
+    inv_res = sql_c.execute('''SELECT id, name FROM inventory''')
+    inventory = {}
+    for item in inv_res:
+      inventory[inv_res[0]] = inv_res[1]
+
+    return inventory
+
+
+  def getTransactionHistory(self, date_from=datetime.datetime.fromtimestamp(0),
+                            date_to=datetime.datetime.now()):
+    inventory = self.getInventory()
+    transactions = []
+    th_res = sql_c.execute('''SELECT id, amount, debit, tran_ts as "ts [timestamp]", inventory_id FROM
+                              transaction_history WHERE uid=? ORDER BY tran_ts ASC''',
+                           (self.getUsername(),))
+
+    credit = 0
+    for transaction_row in th_res:
+      transaction = {}
+      transaction['id'] = transaction_row[0]
+      transaction['amount'] = transaction_row[1]
+      transaction['debit'] = transaction_row[2]
+      transaction['timestamp'] = transaction_row[3]
+      transaction['inventory_id'] = transaction_row[4]
+      transaction['inventory_name'] = inventory[transaction_row[4]] if transaction_row[4] in inventory else ''
+
+      if (transaction['debit']):
+        credit -= transaction_row[1]
+        transaction['amount'] = 0 - transaction['amount']
+      else:
+        credit += transaction_row[1]
+
+      transaction['amount'] = User.getMoneyString(transaction['amount'])
+
+      transaction['total'] = User.getMoneyString(credit)
+
+      transaction_dt = transaction['timestamp']
+      if (transaction_dt >= date_from and transaction_dt <= date_to):
+        transactions.append(transaction)
+
+    return transactions
+
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
-  sessions = {}
+  def getSession(self, send_header=False, clear_cookie=False):
+    cookie = Cookie.SimpleCookie()
+    cookie_found = False
+    if ('Cookie' in self.headers):
+      cookie.load(self.headers.getheader('Cookie'))
+      if ('sid' in cookie and cookie['sid']):
+        sid = cookie['sid'].value
+        cookie_found = True
+
+    if (not cookie_found):
+      sid = sha.new(repr(time.time())).hexdigest()
+      cookie['sid'] = sid
+      cookie['sid']['expires'] = 24 * 60 * 60
+      if (send_header):
+        self.send_header('Set-Cookie', cookie.output())
+
+    if (sid not in sessions):
+      sessions[sid] = {}
+
+    if (clear_cookie):
+      del sessions[sid]
+      cookie['sid'] = None
+      self.send_header('Set-Cookie', cookie.output())
+
+    return sid
+
+  def getSessionVar(self, var):
+    session_var = self.getSession()
+
+    if (var in sessions[session_var]):
+      return sessions[session_var][var]
+    else:
+      return None
+
+  def setSessionVar(self, var, value):
+    sessions[self.getSession()][var] = value
 
   def getFile(self, content_type, base_dir, file_name):
     file_name = '%s/%s' % (base_dir, file_name)
@@ -177,38 +286,153 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     else:
       return 'Cannot file find!'
 
-  def do_GET(self):
-      # Get file
-      split_path = self.path.split('/')
-      base_dir = split_path[1] if (len(split_path) > 1) else ''
-      file_name = split_path[2] if len(split_path) == 3 else ''
+  def sendLogin(self):
+    template = env.get_template('login.html')
+    if ('auth_failure' in self.post_vars and self.post_vars['auth_failure']):
+      error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
+    else:
+      error = None
+    self.wfile.write(template.render(page_name='Login', warning=error, url=self.path))
 
-      if (base_dir == 'css'):
-        self.getFile('text/css', 'css', file_name)
-      elif (base_dir == 'js'):
-        self.getFile('text/javascript', 'js', file_name)
+  def isLoggedIn(self):
+    if (self.getSessionVar('username')):
+      return True
+    else:
+      return False
 
-      elif (base_dir == '' or base_dir == 'credit'):
+  def getCurrentUsername(self):
+    if (self.isLoggedIn()):
+      return self.getSessionVar('username')
+    else:
+      return None
+
+  def getUserObject(self):
+    if (self.isLoggedIn()):
+      return User(self.getCurrentUsername())
+
+  def getCurrentAuthObject(self):
+    if (self.isLoggedIn()):
+      return Auth(self.getCurrentUsername(), self.getSessionVar['password'])
+
+  def do_GET(self, post_vars={}):
+    # Get file
+    self.post_vars = post_vars
+    split_path = self.path.split('/')
+    base_dir = split_path[1] if (len(split_path) > 1) else ''
+    file_name = split_path[2] if len(split_path) == 3 else ''
+
+    if (base_dir == 'css'):
+      self.getFile('text/css', 'css', file_name)
+
+    elif (base_dir == 'js'):
+      self.getFile('text/javascript', 'js', file_name)
+
+    elif (base_dir == 'logout'):
+      self.send_response(200)
+      self.getSession(clear_cookie=True)
+      self.end_headers()
+      self.sendLogin()
+
+    elif (base_dir in ['', 'credit', 'logout', 'history']):
+      self.getSession()
+
+      if ('set_response' not in post_vars):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        user = User()
-        template = env.get_template('credit.html')
-        self.wfile.write(template.render(page_name='Credit', user=user))
 
-      else:
-        self.end_headers()
-        self.wfile.write('help me!!%s' % self.path)
-      return
+      if (not self.isLoggedIn()):
+        self.sendLogin()
+
+      elif (base_dir == '' or base_dir == 'credit'):
+        template = env.get_template('credit.html')
+        self.wfile.write(template.render(page_name='Credit', user=self.getUserObject()))
+
+      elif (base_dir == 'history'):
+        template = env.get_template('history.html')
+        transaction_history = self.getUserObject().getTransactionHistory()
+        transaction_history.reverse()
+
+        if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
+          page_number = int(split_path[2]) if len(split_path) == 3 else 1
+          total_pages = int(math.ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
+          page_data = self.getPageData(page_number, total_pages, '/history/%s')
+          array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
+          array_end = page_number * TRANSACTION_PAGE_SIZE
+          transaction_history = transaction_history[array_start:array_end]
+
+        else:
+          page_data = []
+        self.wfile.write(template.render(page_name='History', transaction_history=transaction_history,
+                                         page_data=page_data))
+
+    else:
+      self.send_response(404)
+      self.send_header('Content-type', 'text/html')
+      self.end_headers()
+      self.wfile.write('Unknown URL: %s' % self.path)
+
+    return
+
+  def getPageData(self, current_page, total_pages, url_template):
+    if (total_pages <= TOTAL_PAGE_DISPLAY):
+      page_range = range(1, total_pages + 1)
+    else:
+      pages_up_down = int(math.ceil((TOTAL_PAGE_DISPLAY - 1) / 2))
+      page_range = range(current_page - pages_up_down, current_page + pages_up_downs + 1)
+
+    page_data = []
+    for page_numer in page_range:
+      page_data.append(['active' if (page_numer == current_page) else '', url_template % page_numer, page_numer])
+
+    return page_data
+
+  def getPostVariables(self):
+    form = cgi.FieldStorage(
+      fp=self.rfile,
+      headers=self.headers,
+      environ={'REQUEST_METHOD':'POST',
+               'CONTENT_TYPE':self.headers['Content-Type'],
+              })
+    variables = {}
+    for field in form.keys():
+      variables[field] = form[field].value
+    return variables
 
   def do_POST(self):
+    self.send_response(200)
+    self.getSession(True)
+
+    post_vars = {}
     # Get file
     split_path = self.path.split('/')
     base_dir = split_path[1] if (len(split_path) > 1) else ''
     file_name = split_path[2] if len(split_path) == 3 else ''
 
-    self.do_GET()
+    variables = self.getPostVariables()
+
+    if ('action' in variables):
+      action = variables['action']
+
+      # Handle login POST requests
+      if (action == 'login'):
+        post_vars['auth_failure'] = True
+        if ('password' in variables and 'username' in variables and self.login(variables['username'], variables['password'])):
+          post_vars['auth_failure'] = False
+
+      if (action == 'pay' and 'amount' in variables):
+        self.getUserObject().removeCredit(float(variables['amount']))
+
+      self.do_GET(post_vars=post_vars)
     return
+
+  def login(self, username, password):
+    if (Auth.login(username, password)):
+      self.setSessionVar('username', username)
+      self.setSessionVar('password', password)
+      return True
+    else:
+      return False
 
 if (__name__ == '__main__'):
 
