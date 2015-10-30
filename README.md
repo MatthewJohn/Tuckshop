@@ -1,6 +1,9 @@
 Todo
 ====
 
+* Backend:
+  * Split classes into seperate files
+  * Complete inventory work
 * Setup user panel:
   * Chose items to purchase/general items
 * Setup Admin panel
