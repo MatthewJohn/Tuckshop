@@ -117,6 +117,7 @@ class Inventory(object):
     return Inventory(new_id)
 
   def getDetails(self):
+    pass
     
 
   def getSalePrice(self):
