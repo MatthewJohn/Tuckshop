@@ -1,2 +1,2 @@
-tuckshopaccountant.db
-tuckshopaccountant.pyc
+db.sqlite3
+*.pyc
