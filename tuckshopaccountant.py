@@ -20,33 +20,18 @@ import sha
 import math
 import time
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tuckshop.settings")
+
+import django
+django.setup()
+
+from tuckshop.app.models import *
+from tuckshop.app.functions import *
+from tuckshop.app.config import *
+
 TRANSACTION_PAGE_SIZE = 10
 TOTAL_PAGE_DISPLAY = 7
-SQL_FILE = 'tuckshopaccountant.db'
 LDAP_SERVER = 'localhost'
-
-def create_schema(sql_connection):
-  sql_cursor = sql_connection.cursor()
-  sql_cursor.execute('''CREATE TABLE credit
-             (uid text PRIMARY KEY, credit real)''')
-  sql_cursor.execute('''CREATE TABLE token
-             (uid text, token text)''')
-  sql_cursor.execute('''CREATE TABLE inventory
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, name text, bardcode_number text, cost real, sale_price real, image_url text)''')
-  sql_cursor.execute('''CREATE TABLE transaction_history
-             (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_id integer, uid text, amount real, debit boolean DEFAULT TRUE, tran_ts timestamp DEFAULT CURRENT_TIMESTAMP)''')
-  sql_cursor.execute('''CREATE TABLE admin
-             (uid text)''')
-  sql_connection.commit()
-
-database_exists = (os.path.isfile(SQL_FILE))
-
-sql_conn = sqlite3.connect(SQL_FILE, isolation_level='IMMEDIATE', detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
-
-if (not database_exists):
-  create_schema(sql_conn)
-
-sql_c = sql_conn.cursor()
 
 
 # Setup listener for RDIF to obtain login details
@@ -73,199 +58,6 @@ env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
 sessions = {}
-
-class Auth(object):
-  def __init__(self, username, password):
-    self.login(username, password)
-    self.username = username
-
-  @staticmethod
-  def login(username, password):
-
-    ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
-    dn = 'uid=%s,ou=People,dc=example,dc=com' % username
-    try:
-      ldap_obj.simple_bind_s(dn, password)
-    except:
-      return False
-    return True
-
-  def getUsername(self):
-    return self.username
-
-  def isAdmin(self):
-    admin_count = sql_c.execute('''SELECT count(*) FROM admin WHERE uid=?''', (self.getUsername(), ))
-    admin_count = user_count.fetchone()[0]
-    if (admin_count):
-      return True
-    else:
-      return False
-
-class Inventory(object):
-  def __init__(self, item_id):
-    self.id = item_id
-    self.getDetails()
-
-  @staticmethod
-  def add(name, sale_price, cost=None, image_url=''):
-    if (cost is None):
-      cost = sale_price
-    sql_c('''INSERT INTO inventory(sale_price, cost, name, image_url) VALUES(?, ?, ?, ?)''',
-          (sale_price, cost, name, image_url))
-    new_id = sql_c.lastrowid
-    sql_conn.commit()
-    return Inventory(new_id)
-
-  def getDetails(self):
-    pass
-    
-
-  def getSalePrice(self):
-    return self.sale_price
-
-  def getCost(self):
-    return self.cost
-
-class User(object):
-  def __init__(self, username):
-    self.username = username
-
-    # Obtain information from LDAP
-    ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
-    dn = 'uid=%s,ou=People,dc=example,dc=com' % username
-    ldap_obj.simple_bind_s()
-    res = ldap_obj.search_s('ou=People,dc=example,dc=com', ldap.SCOPE_ONELEVEL,
-                            'uid=%s' % username, ['mail', 'givenName'])
-
-    if (not res):
-      raise Exception('User \'%s\' does not exist' % username)
-
-    self.dn = res[0][0]
-    self.display_name = res[0][1]['givenName'][0]
-    self.email = res[0][1]['mail'][0]
-
-    # Determine if user exists in user table and create if not
-    user_count = sql_c.execute('''SELECT count(*) FROM credit WHERE uid=?''', (self.getUsername(), ))
-    user_count = user_count.fetchone()[0]
-    if (not user_count):
-      sql_c.execute('INSERT INTO credit(uid, credit) VALUES(?, 0.00)', (self.getUsername(), ))
-      sql_conn.commit()
-
-  @staticmethod
-  def getCurrentUser(request):
-    return User(Auth.getCurrentUser(request))
-
-  def getName(self):
-    return self.display_name
-
-  def getUsername(self):
-    return self.username
-
-  def getEmail(self):
-    return self.email
-
-  def getTokens(self):
-    token_res = sql_c.execute('''SELECT token FROM token WHERE uid=?''', (self.getUsername(),))
-    return [token[0] for token in token_res]
-
-  def addToken(self, token):
-    sql_c.execute('''INSERT INTO token(uid, token) VALUES(?, ?)''', (self.getUsername(), token))
-    sql_conn.commit()
-
-  def removeToken(self, token):
-    sql_c.execute('''DELETE FROM token WHERE uid=? AND token=?''', (self.getUsername(), token))
-
-  def getCredit(self):
-    credit = sql_c.execute('''SELECT credit FROM credit WHERE uid=?''', (self.getUsername(), )).fetchone()
-    return credit[0]
-
-  def getCreditString(self):
-    credit = User.getMoneyString(self.getCredit())
-    return credit
-
-  @staticmethod
-  def getMoneyString(credit):
-    text_color = 'green' if credit >= 0 else 'red'
-
-    if (credit <= -1):
-      credit_sign = '-'
-      credit = 0 - credit
-    else:
-      credit_sign = ''
-
-    if (credit < 1):
-      credit_string = str(int(credit * 100)) + 'p'
-    else:
-      credit_string = '&pound;%.2f' % credit
-
-    return '<font style="color: %s">%s%s</font>' % (text_color, credit_sign, credit_string)
-
-  def addCredit(self, amount):
-    amount = float("%.2f" % amount)
-    if (amount < 0):
-      raise Exception('Cannot use negative number')
-    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(0, ?, ?, ?)''', (self.getUsername(), amount, False))
-    credit = self.getCredit() + amount
-    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''', (credit, self.getUsername()))
-    sql_conn.commit()
-    return self.getCredit()
-
-  def removeCredit(self, amount=None, inventory_object=None):
-    if (inventory_object):
-      inventory_id = inventory_object.getId()
-      if (not amount):
-        amount = inventory_object.getSalePrice()
-    elif (amount):
-      inventory_id = 0
-    else:
-      raise Exception('Must pass amount or inventory_object')
-
-    amount = float("%.2f" % amount)
-    if (amount < 0):
-      raise Exception('Cannot use negative number')
-    sql_c.execute('''INSERT INTO transaction_history(inventory_id, uid, amount, debit) VALUES(?, ?, ?, ?)''',
-                  (self.getUsername(), amount, True))
-    credit = self.getCredit() - amount
-    sql_c.execute('''UPDATE credit SET credit=? WHERE uid=?''',
-                  (credit, self.getUsername()))
-    sql_conn.commit()
-    return self.getCredit()
-
-  def getTransactionHistory(self, date_from=datetime.datetime.fromtimestamp(0),
-                            date_to=datetime.datetime.now()):
-    transactions = []
-    th_res = sql_c.execute('''SELECT id, amount, debit, tran_ts as "ts [timestamp]", inventory_id FROM
-                              transaction_history WHERE uid=? ORDER BY tran_ts ASC''',
-                           (self.getUsername(),))
-
-    credit = 0
-    for transaction_row in th_res:
-      transaction = {}
-      transaction['id'] = transaction_row[0]
-      transaction['amount'] = transaction_row[1]
-      transaction['debit'] = transaction_row[2]
-      transaction['timestamp'] = transaction_row[3]
-      transaction['inventory_id'] = transaction_row[4]
-      if (transaction_row[4]):
-        transaction['inventory_name'] = Inventory(transaction_row[4]).getName()
-      else:
-        transaction['inventory_name'] = ''
-
-      if (transaction['debit']):
-        credit -= transaction_row[1]
-        transaction['amount'] = 0 - transaction['amount']
-      else:
-        credit += transaction_row[1]
-
-      transaction['amount'] = User.getMoneyString(transaction['amount'])
-
-      transaction['total'] = User.getMoneyString(credit)
-
-      transaction_dt = transaction['timestamp']
-      if (transaction_dt >= date_from and transaction_dt <= date_to):
-        transactions.append(transaction)
-
-    return transactions
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
@@ -344,13 +136,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     else:
       return None
 
-  def getUserObject(self):
+  def getCurrentUserObject(self):
     if (self.isLoggedIn()):
-      return User(self.getCurrentUsername())
-
-  def getCurrentAuthObject(self):
-    if (self.isLoggedIn()):
-      return Auth(self.getCurrentUsername(), self.getSessionVar['password'])
+      return User.objects.get(uid=self.getCurrentUsername())
+    else:
+      return None
 
   def do_GET(self, post_vars={}):
     # Get file
@@ -381,28 +171,30 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
       if (not self.isLoggedIn()):
         self.sendLogin()
+      else:
+        user_object = self.getCurrentUserObject()
 
-      elif (base_dir == '' or base_dir == 'credit'):
-        template = env.get_template('credit.html')
-        self.wfile.write(template.render(page_name='Credit', user=self.getUserObject()))
+        if (base_dir == '' or base_dir == 'credit'):
+          template = env.get_template('credit.html')
+          self.wfile.write(template.render(page_name='Credit', user=self.getCurrentUserObject()))
 
-      elif (base_dir == 'history'):
-        template = env.get_template('history.html')
-        transaction_history = self.getUserObject().getTransactionHistory()
-        transaction_history.reverse()
+        elif (base_dir == 'history'):
+          template = env.get_template('history.html')
+          transaction_history = self.getCurrentUserObject().getTransactionHistory()
+          transaction_history.reverse()
 
-        if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
-          page_number = int(split_path[2]) if len(split_path) == 3 else 1
-          total_pages = int(math.ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
-          page_data = self.getPageData(page_number, total_pages, '/history/%s')
-          array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
-          array_end = page_number * TRANSACTION_PAGE_SIZE
-          transaction_history = transaction_history[array_start:array_end]
+          if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
+            page_number = int(split_path[2]) if len(split_path) == 3 else 1
+            total_pages = int(math.ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
+            page_data = self.getPageData(page_number, total_pages, '/history/%s')
+            array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
+            array_end = page_number * TRANSACTION_PAGE_SIZE
+            transaction_history = transaction_history[array_start:array_end]
 
-        else:
-          page_data = []
-        self.wfile.write(template.render(page_name='History', transaction_history=transaction_history,
-                                         page_data=page_data))
+          else:
+            page_data = []
+          self.wfile.write(template.render(page_name='History', transaction_history=transaction_history,
+                                           page_data=page_data))
 
     else:
       self.send_response(404)
@@ -459,13 +251,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           post_vars['auth_failure'] = False
 
       if (action == 'pay' and 'amount' in variables):
-        self.getUserObject().removeCredit(float(variables['amount']))
+        self.getCurrentUserObject().removeCredit(float(variables['amount']))
 
       self.do_GET(post_vars=post_vars)
     return
 
   def login(self, username, password):
-    if (Auth.login(username, password)):
+    if (login(username, password)):
       self.setSessionVar('username', username)
       self.setSessionVar('password', password)
       return True
