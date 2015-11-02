@@ -3,14 +3,14 @@
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
                             <table class="table">
-                                <tr><th>Date</th><th>Item</th><th>Amount</th><th>Credit</th></tr>
+                                <tr><th>Date/Time</th><th>Item</th><th>Amount</th><th>Balance</th></tr>
                                     {% if transaction_history %}
                                         {% for transaction in transaction_history %}
                                             <tr>
-                                                <td>{{ transaction['timestamp'] }}</td>
-                                                <td>{{ transaction['inventory_name'] }}</td>
-                                                <td>{{ transaction['amount'] }}</td>
-                                                <td>{{ transaction['total'] }}</td>
+                                                <td>{{ transaction.toTimeString() }}</td>
+                                                <td>{{ transaction.inventory.name }}</td>
+                                                <td>{{ transaction.getAmountString() }}</td>
+                                                <td>{{ transaction.getCurrentCreditString() }}</td>
                                             </tr>
                                     {% endfor %}
                                 </table>
