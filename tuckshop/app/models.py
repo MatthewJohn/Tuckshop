@@ -64,10 +64,13 @@ class User(models.Model):
   def getCreditString(self):
     return getMoneyString(self.credit)
 
-  def getTransactionHistory(self, date_from=datetime.datetime.fromtimestamp(0),
-                            date_to=datetime.datetime.now()):
+  def getTransactionHistory(self, date_from=None, date_to=None):
+    if date_from is None:
+      date_from = datetime.datetime.fromtimestamp(0)
 
-    return Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
+    if date_to is None:
+      date_to = datetime.datetime.now()
+    return Transaction.objects.filter(user=self, timestamp__gte=date_from, timestamp__lte=date_to)
 
 
 class Inventory(models.Model):
@@ -84,18 +87,36 @@ class Transaction(models.Model):
   inventory = models.ForeignKey(Inventory, null=True)
   timestamp = models.DateTimeField(auto_now_add=True)
 
+  class Meta:
+    ordering = ['-timestamp']
+
+  def __str__(self):
+    return self.toTimeString()
+
+  def getAmountString(self):
+    return getMoneyString(self.amount)
+
   def getAdditionValue(self):
     if (self.debit):
       return (0 - self.amount)
     else:
       return self.amount
 
-  def getCurrentCredit(self, user):
+  def getCurrentCredit(self):
     credit = 0
-    for transaction in Transaction.objects.filter(user=user, timestamp__lte=self.timestamp):
+    for transaction in Transaction.objects.filter(user=self.user, pk__lt=self.id):
       credit += transaction.getAdditionValue()
     credit += self.getAdditionValue()
     return credit
+
+  def getCurrentCreditString(self):
+    return getMoneyString(self.getCurrentCredit())
+
+  def toTimeString(self):
+    if (self.timestamp.date() == datetime.datetime.today().date()):
+      return self.timestamp.strftime("%H:%M")
+    else:
+      return self.timestamp.strftime("%d/%m/%y %H:%M")
 
 class Token(models.Model):
   user = models.ForeignKey(User)

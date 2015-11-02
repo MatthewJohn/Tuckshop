@@ -181,7 +181,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         elif (base_dir == 'history'):
           template = env.get_template('history.html')
           transaction_history = self.getCurrentUserObject().getTransactionHistory()
-          transaction_history.reverse()
 
           if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
             page_number = int(split_path[2]) if len(split_path) == 3 else 1
@@ -193,6 +192,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
           else:
             page_data = []
+          print transaction_history
           self.wfile.write(template.render(page_name='History', transaction_history=transaction_history,
                                            page_data=page_data))
 
