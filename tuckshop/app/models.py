@@ -43,6 +43,7 @@ class User(models.Model):
 
     if (inventory):
       transaction.inventory = inventory
+
       if (not amount):
         amount = inventory.sale_price
 
@@ -55,6 +56,10 @@ class User(models.Model):
 
     transaction.amount = amount
     transaction.save()
+
+    if (inventory):
+      inventory.quantity -= 1
+      inventory.save()
 
     self.credit -= amount
     self.save()
@@ -76,12 +81,26 @@ class User(models.Model):
 class Inventory(models.Model):
   name = models.CharField(max_length=200)
   bardcode_number = models.CharField(max_length=25, null=True)
-  cost = models.DecimalField(max_digits=4, decimal_places=2)
-  sale_price = models.DecimalField(max_digits=4, decimal_places=2)
+  price = models.DecimalField(max_digits=4, decimal_places=2)
   image_url = models.CharField(max_length=250, null=True)
+  quantity = models.IntegerField(default=0)
 
   def getSalePriceString(self):
-    return getMoneyString(self.sale_price, include_sign=False)
+    return getMoneyString(self.price, include_sign=False)
+
+  def addItems(self, quantity, user, cost):
+    transaction = InventoryTransaction(inventory=self, user=user, quantity=quantity, cost=cost)
+    transaction.save()
+
+    self.quantity += quantity
+    self.save()
+
+
+class InventoryTransaction(models.Model):
+  inventory = models.ForeignKey(Inventory)
+  user = models.ForeignKey(User)
+  quantity = models.IntegerField()
+  cost = models.DecimalField(max_digits=4, decimal_places=2)
 
 class Transaction(models.Model):
   user = models.ForeignKey(User)
