@@ -80,6 +80,9 @@ class Inventory(models.Model):
   sale_price = models.DecimalField(max_digits=4, decimal_places=2)
   image_url = models.CharField(max_length=250, null=True)
 
+  def getSalePriceString(self):
+    return getMoneyString(self.sale_price, include_sign=False)
+
 class Transaction(models.Model):
   user = models.ForeignKey(User)
   amount = models.DecimalField(max_digits=5, decimal_places=2)

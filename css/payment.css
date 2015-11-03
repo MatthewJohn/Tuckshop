@@ -1,20 +1,28 @@
 body
 {
   background-color: #FBF7EC;
+  background-image: url(http://www.theartistevolution.com/wp-content/uploads/2012/12/HiRes.png);
+  background-repeat: no-repeat;
+  background-size: 50%;
+  background-position:left;
 }
 
-#picture{
-    background-image: url(http://www.theartistevolution.com/wp-content/uploads/2012/12/HiRes.png);
-    height:100%;
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position:50% 0%;
+#content
+{
+  float: right;
+  width: 50%;
 }
+
 
 #central{
-    height:100%;
+  height:100%;
+}
+
+.caption h3
+{
+  font-size: 13pt;
 }
 
 .position-central{
-    margin-top:45%;
+  margin-top: 15%;
 }

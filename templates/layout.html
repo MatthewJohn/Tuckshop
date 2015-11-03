@@ -1,7 +1,7 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-        <title>ITDev Tuck Shop - {{ page_name }}</title>
+        <title>{{ app_name }} - {{ page_name }}</title>
         <link rel="stylesheet" href="/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/css/payment.css" />
         <script src="/js/jquery-2.1.4.min.js"></script>
@@ -9,14 +9,10 @@
         
     </head>
     <body>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <div id="picture">
-                    </div>
-                </div>
-                <div class="col-md-6">
+        <div id="content" class="container">
+            <div class="col-md-12">
 {% block content %}{% endblock %}
+                <div class="col-md-12">
                     <footer>
                         <ul class="nav nav-pills nav-justified">
                             <li role="presentation"><a href="/credit">Credit</a></li>

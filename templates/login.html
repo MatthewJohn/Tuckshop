@@ -2,7 +2,7 @@
 {% block content %}
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
-                            <h1>Tuck Shop</h1>
+                            <h1>{{ app_name }}</h1>
                             <p>Welcome to the tuck shop</p>
                             {{ warning if warning else '' }}
                             <form action="{{ url }}" method="post">

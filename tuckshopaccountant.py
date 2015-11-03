@@ -32,6 +32,7 @@ from tuckshop.app.config import *
 TRANSACTION_PAGE_SIZE = 10
 TOTAL_PAGE_DISPLAY = 7
 LDAP_SERVER = 'localhost'
+APP_NAME = 'ITDev Tuck Shop'
 
 
 # Setup listener for RDIF to obtain login details
@@ -122,7 +123,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
     else:
       error = None
-    self.wfile.write(template.render(page_name='Login', warning=error, url=self.path))
+    self.wfile.write(template.render(app_name=APP_NAME, page_name='Login', warning=error, url=self.path))
 
   def isLoggedIn(self):
     if (self.getSessionVar('username')):
@@ -176,7 +177,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         if (base_dir == '' or base_dir == 'credit'):
           template = env.get_template('credit.html')
-          self.wfile.write(template.render(page_name='Credit', user=self.getCurrentUserObject()))
+          inventory_items = Inventory.objects.all()
+          self.wfile.write(template.render(app_name=APP_NAME, inventory=inventory_items,
+                                           page_name='Credit', user=self.getCurrentUserObject()))
 
         elif (base_dir == 'history'):
           template = env.get_template('history.html')
@@ -193,7 +196,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           else:
             page_data = []
           print transaction_history
-          self.wfile.write(template.render(page_name='History', transaction_history=transaction_history,
+          self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
+                                           transaction_history=transaction_history,
                                            page_data=page_data))
 
     else:
