@@ -23,3 +23,12 @@ body
 .position-central{
   margin-top: 15%;
 }
+
+.custom-amount
+{
+  margin-top: 0;
+}
+#custom-payment-submit
+{
+  margin-top: 5px;
+}

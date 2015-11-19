@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
                     <div class="row" id="central">
-                        <div class="col-md-8 col-sm-12 col-xs-12 position-central">
+                        <div class="col-md-8 col-sm-12 col-xs-12">
                             <h1>Tuck Shop</h1>
                             <div id="current-credit">
                                 <p>Welcome to the tuck shop, {{ user.display_name }}. You currently have </p>
@@ -12,30 +12,35 @@
                         <div class="col-md-12">
 
                             {% for item in inventory %}
-                            <div class="col-md-3 col-xs-12 col-sm-12">
+                            <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
                                 <div class="thumbnail">
-                                  <img src="{{ item.image_url }}" alt="{{ item.name }}">
-                                  <div class="caption">
-                                    <h3>{{ item.name }}</h3>
-                                    <p><a href="/purchase" class="btn btn-primary" role="button">{{ item.getSalePriceString() }}</a></p>
-                                  </div>
+                                    <img src="{{ item.image_url }}" alt="{{ item.name }}">
+                                    <div class="caption">
+                                        <form id="purchase-{{ item.id }}" action="/credit" method="post">
+                                            <input type="hidden" name="action" value="pay" />
+                                            <input type="hidden" name="item_id" value="{{ item.id }}" />
+                                            <h3>{{ item.name }}</h3>
+                                            <p><a href="javascript:{}" onclick="document.getElementById('purchase-{{ item.id }}').submit();" class="btn btn-primary" role="button">{{ item.getSalePriceString() }}</a></p>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                             {% endfor %}
-                        </div>
-                        <div class="col-md-6">
-
-                            <form action="/credit" method="post">
-                                <input type="hidden" name="action" value="pay" />
-                                <div class="form-group">
-                                    <label for="money">How much would you like to pay?</label>
-                                    <div class="input-group">
-                                        <div class="input-group-addon">&pound;</div>
-                                        <input type="text" class="form-control" id="money" name="amount" placeholder="0.2">
+                            <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                                <div class="thumbnail">
+                                    <div class="caption">
+                                        <h3 class='custom-amount'>Custom Amount</h3>
+                                        <form action="/credit" method="post">
+                                            <input type="hidden" name="action" value="pay" />
+                                            <div class="input-group">
+                                                <div class="input-group-addon">&pound;</div>
+                                                <input type="text" class="form-control" id="money" name="amount" placeholder="0.2">
+                                            </div>
+                                            <div><button type="submit" id="custom-payment-submit" class="btn btn-default">Pay</button></div>
+                                        </form>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-default">Submit</button>
-                            </form>
+                            </div>
                         </div>
                     </div>
 {% endblock %}

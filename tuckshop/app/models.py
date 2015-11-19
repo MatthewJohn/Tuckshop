@@ -39,13 +39,16 @@ class User(models.Model):
     return self.credit
 
   def removeCredit(self, amount=None, inventory=None):
+    if (inventory and inventory.quantity <= 0):
+      raise Exception('There are no items in stock')
+
     transaction = Transaction(user=self, debit=True)
 
     if (inventory):
       transaction.inventory = inventory
 
       if (not amount):
-        amount = inventory.sale_price
+        amount = inventory.price
 
     elif not amount:
       raise Exception('Must pass amount or inventory')
@@ -84,6 +87,10 @@ class Inventory(models.Model):
   price = models.DecimalField(max_digits=4, decimal_places=2)
   image_url = models.CharField(max_length=250, null=True)
   quantity = models.IntegerField(default=0)
+
+  @staticmethod
+  def getAvailableItems():
+    return Inventory.objects.filter(quantity__gt=0)
 
   def getSalePriceString(self):
     return getMoneyString(self.price, include_sign=False)
