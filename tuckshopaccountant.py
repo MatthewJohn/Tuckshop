@@ -162,7 +162,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.end_headers()
       self.sendLogin()
 
-    elif (base_dir in ['', 'credit', 'logout', 'history']):
+    elif (base_dir in ['', 'credit', 'logout', 'history', 'stock']):
       self.getSession()
 
       if ('set_response' not in post_vars):
@@ -177,7 +177,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         if (base_dir == '' or base_dir == 'credit'):
           template = env.get_template('credit.html')
-          inventory_items = Inventory.objects.all()
+          inventory_items = Inventory.getAvailableItems()
           self.wfile.write(template.render(app_name=APP_NAME, inventory=inventory_items,
                                            page_name='Credit', user=self.getCurrentUserObject()))
 
@@ -195,16 +195,24 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
           else:
             page_data = []
-          print transaction_history
+
           self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
                                            transaction_history=transaction_history,
                                            page_data=page_data))
+
+        elif (base_dir == 'stock'):
+          template = env.get_template('stock.html')
+          inventory_items = Inventory.objects.all()
+          self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
+                                           inventory_items=inventory_items))
 
     else:
       self.send_response(404)
       self.send_header('Content-type', 'text/html')
       self.end_headers()
-      self.wfile.write('Unknown URL: %s' % self.path)
+      template = env.get_template('404.html')
+      self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
+                                           path=self.path))
 
     return
 
@@ -254,10 +262,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if ('password' in variables and 'username' in variables and self.login(variables['username'], variables['password'])):
           post_vars['auth_failure'] = False
 
-      if (action == 'pay' and 'amount' in variables):
+      if (base_dir == 'credit' and action == 'pay' and 'amount' in variables):
         self.getCurrentUserObject().removeCredit(float(variables['amount']))
+      elif (base_dir == 'credit' and action == 'pay' and 'item_id' in variables):
+        inventory_object = Inventory.objects.get(pk=variables['item_id'])
+        self.getCurrentUserObject().removeCredit(inventory=inventory_object)
 
-      self.do_GET(post_vars=post_vars)
+    self.do_GET(post_vars=post_vars)
     return
 
   def login(self, username, password):
