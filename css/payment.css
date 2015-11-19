@@ -1,18 +1,15 @@
 body
 {
-  background-color: #FBF7EC;
+    background-color: #FBF7EC;
+}
+#background-image
+{
   background-image: url(http://www.theartistevolution.com/wp-content/uploads/2012/12/HiRes.png);
   background-repeat: no-repeat;
-  background-size: 50%;
+  background-size: 100%;
   background-position:left;
+  height: 100%;
 }
-
-#content
-{
-  float: right;
-  width: 50%;
-}
-
 
 #central{
   height:100%;

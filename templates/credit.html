@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
                     <div class="row" id="central">
-                        <div class="col-md-8 position-central">
+                        <div class="col-md-8 col-sm-12 col-xs-12 position-central">
                             <h1>Tuck Shop</h1>
                             <div id="current-credit">
                                 <p>Welcome to the tuck shop, {{ user.display_name }}. You currently have </p>
@@ -12,7 +12,7 @@
                         <div class="col-md-12">
 
                             {% for item in inventory %}
-                            <div class="col-xs-6 col-md-3">
+                            <div class="col-md-3 col-xs-12 col-sm-12">
                                 <div class="thumbnail">
                                   <img src="{{ item.image_url }}" alt="{{ item.name }}">
                                   <div class="caption">
