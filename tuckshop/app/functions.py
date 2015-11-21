@@ -1,6 +1,7 @@
 from config import LDAP_SERVER
 
 def getMoneyString(credit, include_sign=True):
+  print credit
   text_color = 'green' if credit >= 0 else 'red'
 
   if (credit <= -1):
@@ -9,10 +10,10 @@ def getMoneyString(credit, include_sign=True):
   else:
     credit_sign = ''
 
-  if (credit < 1):
-    credit_string = str(int(credit * 100)) + 'p'
+  if (credit < 100):
+    credit_string = str(credit) + 'p'
   else:
-    credit_string = '&pound;%.2f' % credit
+    credit_string = '&pound;%.2f' % (float(credit) / 100)
 
   if (include_sign):
     return '<font style="color: %s">%s%s</font>' % (text_color, credit_sign, credit_string)
@@ -30,8 +31,8 @@ def login(username, password):
   except:
     return False
 
-  user_object = User.objects.filter(uid=username)
-  if (not len(user_object)):
+  user_object = User.objects.get(uid=username)
+  if (not user_object:
     user_object = User(uid=username)
     user_object.save()
   else:

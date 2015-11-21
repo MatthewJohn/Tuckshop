@@ -9,7 +9,7 @@ import datetime
 # Create your models here.
 class User(models.Model):
   uid = models.CharField(max_length=10)
-  credit = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+  credit = models.IntegerField(default=0)
   admin = models.BooleanField(default=False)
 
   def __init__(self, *args, **kwargs):
@@ -31,7 +31,7 @@ class User(models.Model):
     self.email = res[0][1]['mail'][0]
 
   def addCredit(self, amount):
-    amount = Decimal(amount)
+    amount = int(amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
     self.credit += amount
@@ -53,7 +53,7 @@ class User(models.Model):
     elif not amount:
       raise Exception('Must pass amount or inventory')
 
-    amount = Decimal(amount)
+    amount = int(amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
 
@@ -84,7 +84,7 @@ class User(models.Model):
 class Inventory(models.Model):
   name = models.CharField(max_length=200)
   bardcode_number = models.CharField(max_length=25, null=True)
-  price = models.DecimalField(max_digits=4, decimal_places=2)
+  price = models.IntegerField()
   image_url = models.CharField(max_length=250, null=True)
   quantity = models.IntegerField(default=0)
   archive = models.BooleanField(default=False)
@@ -111,11 +111,11 @@ class InventoryTransaction(models.Model):
   inventory = models.ForeignKey(Inventory)
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
-  cost = models.DecimalField(max_digits=4, decimal_places=2)
+  cost = models.IntegerField()
 
 class Transaction(models.Model):
   user = models.ForeignKey(User)
-  amount = models.DecimalField(max_digits=5, decimal_places=2)
+  amount = models.IntegerField()
   debit = models.BooleanField(default=True)
   inventory = models.ForeignKey(Inventory, null=True)
   timestamp = models.DateTimeField(auto_now_add=True)

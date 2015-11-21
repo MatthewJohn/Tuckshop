@@ -24,6 +24,6 @@ items = [
 ]
 
 for item_itx in items:
-    item = Inventory(name=item_itx[0], image_url=item_itx[2], price=0.30)
+    item = Inventory(name=item_itx[0], image_url=item_itx[2], price=30)
     item.save()
-    item.addItems(item_itx[1], user, 0.40)
+    item.addItems(item_itx[1], user, 40)
