@@ -267,7 +267,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     post_vars['auth_failure'] = False
 
             if (base_dir == 'credit' and action == 'pay' and 'amount' in variables):
-                self.getCurrentUserObject().removeCredit(float(variables['amount']))
+                self.getCurrentUserObject().removeCredit(int(variables['amount']))
             elif (base_dir == 'credit' and action == 'pay' and 'item_id' in variables):
                 inventory_object = Inventory.objects.get(pk=variables['item_id'])
                 self.getCurrentUserObject().removeCredit(inventory=inventory_object)
