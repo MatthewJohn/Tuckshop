@@ -149,6 +149,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET(self, post_vars={}):
         # Get file
+        if 'error' not in post_vars:
+            post_vars['error'] = None
         self.post_vars = post_vars
         split_path = self.path.split('/')
         base_dir = split_path[1] if (len(split_path) > 1) else ''
@@ -186,7 +188,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     template = env.get_template('credit.html')
                     inventory_items = Inventory.getAvailableItems()
                     self.wfile.write(template.render(app_name=APP_NAME, inventory=inventory_items,
-                                                     page_name='Credit', user=self.getCurrentUserObject()))
+                                                     page_name='Credit', user=self.getCurrentUserObject(),
+                                                     error=post_vars['error']))
 
                 elif (base_dir == 'history'):
                     template = env.get_template('history.html')
@@ -205,7 +208,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
                                                      transaction_history=transaction_history,
-                                                     page_data=page_data))
+                                                     page_data=page_data, error=post_vars['error']))
 
                 elif (base_dir == 'stock'):
                     template = env.get_template('stock.html')
@@ -213,7 +216,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     active_items = Inventory.objects.filter(archive=False)
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
                                                      inventory_items=inventory_items,
-                                                     active_items=active_items))
+                                                     active_items=active_items, error=post_vars['error']))
 
         else:
             self.send_response(404)
@@ -221,7 +224,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.end_headers()
             template = env.get_template('404.html')
             self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
-                                             path=self.path))
+                                             path=self.path, error=post_vars['error']))
 
         return
 
@@ -271,11 +274,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 if ('password' in variables and 'username' in variables and
                         self.login(variables['username'], variables['password'])):
                     post_vars['auth_failure'] = False
-
-            elif base_dir == 'credit':
-                post_vars = self.processCreditPostRequest(variables, post_vars)
-            elif base_dir == 'stock':
-                post_vars = self.processStockPostRequest(variables, post_vars)
+            elif self.isLoggedIn():
+                if base_dir == 'credit':
+                    post_vars = self.processCreditPostRequest(variables, post_vars)
+                elif base_dir == 'stock':
+                    post_vars = self.processStockPostRequest(variables, post_vars)
 
         self.do_GET(post_vars=post_vars)
         return
@@ -301,7 +304,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def processStockPostRequest(self, variables, post_vars):
         action = None if 'action' not in variables else variables['action']
         if (variables['action'] == 'Add Stock'):
-            if variables['quantity'] < 1 or not int(variables['quantity']):
+            if not int(variables['quantity'] or int(variables['quantity']) < 1):
+                print "'I don't care"
                 post_vars['error'] = 'Quantity must be a positive integer'
                 return post_vars
 
