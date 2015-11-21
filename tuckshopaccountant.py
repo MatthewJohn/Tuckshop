@@ -20,6 +20,7 @@ import random
 import sha
 import math
 import time
+from mimetypes import read_mime_types
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tuckshop.settings")
 
@@ -104,6 +105,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         file_name = '%s/%s' % (base_dir, file_name)
 
         if (file_name and os.path.isfile(file_name)):
+            if content_type is None:
+                content_type = read_mime_types(file_name)
             self.send_response(200)
             self.send_header('Content-type', content_type)
             self.end_headers()
@@ -156,6 +159,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         elif (base_dir == 'js'):
             self.getFile('text/javascript', 'js', file_name)
+
+        elif base_dir == 'fonts':
+            self.getFile(None, 'fonts', file_name)
 
         elif (base_dir == 'logout'):
             self.send_response(200)
@@ -266,12 +272,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         self.login(variables['username'], variables['password'])):
                     post_vars['auth_failure'] = False
 
-            if (base_dir == 'credit' and action == 'pay' and 'amount' in variables):
-                self.getCurrentUserObject().removeCredit(int(variables['amount']))
-            elif (base_dir == 'credit' and action == 'pay' and 'item_id' in variables):
-                inventory_object = Inventory.objects.get(pk=variables['item_id'])
-                self.getCurrentUserObject().removeCredit(inventory=inventory_object)
-            elif (base_dir == 'stock'):
+            elif base_dir == 'credit':
+                post_vars = self.processCreditPostRequest(variables, post_vars)
+            elif base_dir == 'stock':
                 post_vars = self.processStockPostRequest(variables, post_vars)
 
         self.do_GET(post_vars=post_vars)
@@ -284,6 +287,16 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return True
         else:
             return False
+
+    def processCreditPostRequest(self, variables, post_vars):
+        action = variables['action']
+        if (action == 'pay' and 'amount' in variables):
+            self.getCurrentUserObject().removeCredit(int(variables['amount']))
+        elif (action == 'pay' and 'item_id' in variables):
+            inventory_object = Inventory.objects.get(pk=variables['item_id'])
+            self.getCurrentUserObject().removeCredit(inventory=inventory_object)
+
+        return post_vars
 
     def processStockPostRequest(self, variables, post_vars):
         action = None if 'action' not in variables else variables['action']
