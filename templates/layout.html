@@ -11,6 +11,13 @@
     <body>
         <div class="container-fluid">
             <div id="background-image" class="col-md-6 hidden-sm hidden-xs"></div>
+            {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Error:</span>
+                {{ error }}
+            </div>
+            {% endif %}
             <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
 {% block content %}{% endblock %}
             </div>
@@ -21,6 +28,8 @@
                         <ul class="nav nav-pills nav-justified">
                             <li role="presentation"><a href="/credit">Credit</a></li>
                             <li role="presentation"><a href="/history">Transaction History</a></li>
+                            <li role="presentation"><a href="/stock">Stock Management</a></li>
+                            <li role="presentation"><a href="/admin">Admin</a></li>
                             <li role="presentation"><a href="/logout">Logout</a></li>
                         </ul>
                     </footer>
