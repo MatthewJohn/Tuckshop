@@ -31,8 +31,8 @@ def login(username, password):
   except:
     return False
 
-  user_object = User.objects.get(uid=username)
-  if not user_object:
+  user_object = User.objects.filter(uid=username)
+  if (not len(user_object)):
     user_object = User(uid=username)
     user_object.save()
   else:
