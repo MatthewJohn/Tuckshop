@@ -241,7 +241,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         variables = {}
         for field in form.keys():
-            print form[field]
             variables[field] = form[field].value
         return variables
 
