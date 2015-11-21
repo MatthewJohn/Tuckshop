@@ -32,7 +32,7 @@ def login(username, password):
     return False
 
   user_object = User.objects.get(uid=username)
-  if (not user_object:
+  if not user_object:
     user_object = User(uid=username)
     user_object.save()
   else:
