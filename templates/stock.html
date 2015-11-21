@@ -1,3 +1,101 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <div class="row" id="central position-central">
+                        <div class="col-md-12" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
+                            <h2>Add Stock</h2>
+                            <form action="/stock" method="post">
+                                <div class="col-lg-5 col-md-5 col-sm-6 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <label for="inv_dropdown" >Item:</label>
+                                    </span>
+                                    <select class="form-control" id="inv_dropdown" name="inv_id">
+                                        {% for item in active_items %}
+                                        <option value="{{ item.id }}">{{ item.getDropdownName() }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <label for="quantity_input">Quantity:</label>
+                                    </span>
+                                    <input type="text" class="form-control" id="quantity_input" size="5" name="quantity" />
+                                </div>
+                                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <input type="radio" selected="true" name="cost_type" value="total" aria-label="...">
+                                        <label>Total Cost (&pound;):</label>
+                                    </span>
+                                    <input type="text" class="form-control" id="cost_input_total" size="5" name="cost_total" aria-describedby="cost-addon" />
+                                </div>
+                                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <input type="radio" selected="true" name="cost_type" value="each" aria-label="...">
+                                        <label>Cost per Item: (&pound;):</label>
+                                    </span>
+                                    <input type="text" class="form-control" id="cost_input_each" size="5" name="cost_each" aria-describedby="cost-addon" />
+                                </div>
+                                <input type="submit" name="action" value="Add Stock" class="btn btn-info" />
+                            </form>
+                        </div>
+                        <div class="col-md-12" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
+                            <h2>Update inventory</h2>
+                            <table class="table">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Image URL</th>
+                                    <th>Archive</th>
+                                    <tr></th>
+                                </tr>
+                                {% for item in inventory_items %}
+                                <tr class="table-row">
+                                    <form action="/stock" method="post" id="update_form_{{ item.id }}"/>
+                                        <input type="hidden" name="item_id" value="{{ item.id }}" />
+                                        <td>
+                                            <input type="text" class="form-control" name="item_name" value="{{ item.name }}" size="8" />
+                                        </td>
+                                        <td>
+                                            {{ item.quantity }}
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control" name="item_price" value="{{ item.price }}" size="5" />
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control" name="image_url" value="{{ item.image_url }}" size="8" />
+                                        </td>
+                                        <td>
+                                            {% if item.archive %}<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>{% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <input type="hidden" id="action_{{ item.id }}" name="action" value="" />
+                                                <button type="button" class="btn btn-warning" href='#' onclick="$('#action_{{ item.id }}').val('update'); $('#update_form_{{ item.id }}').submit()">Update</button>
+                                                <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <span class="caret"></span>
+                                                    <span class="sr-only">Toggle Dropdown</span>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a href='#' onclick="$('#action_{{ item.id }}').val('archive'); $('#update_form_{{ item.id }}').submit()">Archive</a></li>
+                                                    <li><a href='#' onclick="$('#action_{{ item.id }}').val('delete'); $('#update_form_{{ item.id }}').submit()">Delete</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </form>
+                                </tr>
+                                {% endfor %}
+                                <tr>
+                                    <form action="/stock" method="post">
+                                        <input type="hidden" name="action" value="create" />
+                                        <td><input type="text" class="form-control" name="item_name" placeholder="New Item..." size="8" /></td>
+                                        <td>0</td>
+                                        <td><input type="text" class="form-control" name="item_price" placeholder="Price" size="5" /></td>
+                                        <td><input type="text" class="form-control" name="image_url" placeholder="Image URL" size="8" /></td>
+                                        <td><input type="checkbox" class="form-control" name="item_archive" value="0" /></td>
+                                        <td><input type="submit" class="btn btn-info" value="Create" />
+                                    </form>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
 {% endblock %}

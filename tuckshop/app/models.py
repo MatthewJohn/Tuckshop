@@ -87,10 +87,11 @@ class Inventory(models.Model):
   price = models.DecimalField(max_digits=4, decimal_places=2)
   image_url = models.CharField(max_length=250, null=True)
   quantity = models.IntegerField(default=0)
+  archive = models.BooleanField(default=False)
 
   @staticmethod
   def getAvailableItems():
-    return Inventory.objects.filter(quantity__gt=0)
+    return Inventory.objects.filter(quantity__gt=0).filter(archive=False)
 
   def getSalePriceString(self):
     return getMoneyString(self.price, include_sign=False)
@@ -101,6 +102,9 @@ class Inventory(models.Model):
 
     self.quantity += quantity
     self.save()
+
+  def getDropdownName(self):
+    return "%s (%i in stock)" % (self.name, self.quantity)
 
 
 class InventoryTransaction(models.Model):

@@ -3,6 +3,7 @@
 import sqlite3
 import os
 
+from decimal import Decimal, getcontext
 import ldap
 
 import BaseHTTPServer
@@ -35,22 +36,22 @@ LDAP_SERVER = 'localhost'
 APP_NAME = 'ITDev Tuck Shop'
 
 
-# Setup listener for RDIF to obtain login details
+# Setup listener for RFID to obtain login details
 # from asyncore import file_dispatcher, loop
 # from evdev import InputDevice, categorize, ecodes
 # dev = InputDevice('/dev/input/event8')
 
 # class InputDeviceDispatcher(file_dispatcher):
-#   def __init__(self, device):
-#     self.device = device
-#     file_dispatcher.__init__(self, device)
+#     def __init__(self, device):
+#         self.device = device
+#         file_dispatcher.__init__(self, device)
 
-#   def recv(self, ign=None):
-#     return self.device.read()
+#     def recv(self, ign=None):
+#         return self.device.read()
 
-#   def handle_read(self):
-#     for event in self.recv():
-#       print(repr(event))
+#     def handle_read(self):
+#         for event in self.recv():
+#             print(repr(event))
 
 #InputDeviceDispatcher(dev)
 #loop()
@@ -62,225 +63,291 @@ sessions = {}
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
-  def getSession(self, send_header=False, clear_cookie=False):
-    cookie = Cookie.SimpleCookie()
-    cookie_found = False
-    if ('Cookie' in self.headers):
-      cookie.load(self.headers.getheader('Cookie'))
-      if ('sid' in cookie and cookie['sid']):
-        sid = cookie['sid'].value
-        cookie_found = True
+    def getSession(self, send_header=False, clear_cookie=False):
+        cookie = Cookie.SimpleCookie()
+        cookie_found = False
+        if ('Cookie' in self.headers):
+            cookie.load(self.headers.getheader('Cookie'))
+            if ('sid' in cookie and cookie['sid']):
+                sid = cookie['sid'].value
+                cookie_found = True
 
-    if (not cookie_found):
-      sid = sha.new(repr(time.time())).hexdigest()
-      cookie['sid'] = sid
-      cookie['sid']['expires'] = 24 * 60 * 60
-      if (send_header):
-        self.send_header('Set-Cookie', cookie.output())
+        if (not cookie_found):
+            sid = sha.new(repr(time.time())).hexdigest()
+            cookie['sid'] = sid
+            cookie['sid']['expires'] = 24 * 60 * 60
+            if (send_header):
+                self.send_header('Set-Cookie', cookie.output())
 
-    if (sid not in sessions):
-      sessions[sid] = {}
+        if (sid not in sessions):
+            sessions[sid] = {}
 
-    if (clear_cookie):
-      del sessions[sid]
-      cookie['sid'] = None
-      self.send_header('Set-Cookie', cookie.output())
+        if (clear_cookie):
+            del sessions[sid]
+            cookie['sid'] = None
+            self.send_header('Set-Cookie', cookie.output())
 
-    return sid
+        return sid
 
-  def getSessionVar(self, var):
-    session_var = self.getSession()
+    def getSessionVar(self, var):
+        session_var = self.getSession()
 
-    if (var in sessions[session_var]):
-      return sessions[session_var][var]
-    else:
-      return None
+        if (var in sessions[session_var]):
+            return sessions[session_var][var]
+        else:
+            return None
 
-  def setSessionVar(self, var, value):
-    sessions[self.getSession()][var] = value
+    def setSessionVar(self, var, value):
+        sessions[self.getSession()][var] = value
 
-  def getFile(self, content_type, base_dir, file_name):
-    file_name = '%s/%s' % (base_dir, file_name)
+    def getFile(self, content_type, base_dir, file_name):
+        file_name = '%s/%s' % (base_dir, file_name)
 
-    if (file_name and os.path.isfile(file_name)):
-      self.send_response(200)
-      self.send_header('Content-type', content_type)
-      self.end_headers()
-      self.wfile.write(self.includeFile(file_name))
-    else:
-      self.send_response(401)
+        if (file_name and os.path.isfile(file_name)):
+            self.send_response(200)
+            self.send_header('Content-type', content_type)
+            self.end_headers()
+            self.wfile.write(self.includeFile(file_name))
+        else:
+            self.send_response(401)
 
-  def includeFile(self, file_name):
-    if (file_name and os.path.isfile(file_name)):
-      with open(file_name) as fh:
-        return fh.read()
-    else:
-      return 'Cannot file find!'
+    def includeFile(self, file_name):
+        if (file_name and os.path.isfile(file_name)):
+            with open(file_name) as fh:
+                return fh.read()
+        else:
+            return 'Cannot file find!'
 
-  def sendLogin(self):
-    template = env.get_template('login.html')
-    if ('auth_failure' in self.post_vars and self.post_vars['auth_failure']):
-      error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
-    else:
-      error = None
-    self.wfile.write(template.render(app_name=APP_NAME, page_name='Login', warning=error, url=self.path))
+    def sendLogin(self):
+        template = env.get_template('login.html')
+        if ('auth_failure' in self.post_vars and self.post_vars['auth_failure']):
+            error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
+        else:
+            error = None
+        self.wfile.write(template.render(app_name=APP_NAME, page_name='Login', warning=error, url=self.path))
 
-  def isLoggedIn(self):
-    if (self.getSessionVar('username')):
-      return True
-    else:
-      return False
+    def isLoggedIn(self):
+        if (self.getSessionVar('username')):
+            return True
+        else:
+            return False
 
-  def getCurrentUsername(self):
-    if (self.isLoggedIn()):
-      return self.getSessionVar('username')
-    else:
-      return None
+    def getCurrentUsername(self):
+        if (self.isLoggedIn()):
+            return self.getSessionVar('username')
+        else:
+            return None
 
-  def getCurrentUserObject(self):
-    if (self.isLoggedIn()):
-      return User.objects.get(uid=self.getCurrentUsername())
-    else:
-      return None
+    def getCurrentUserObject(self):
+        if (self.isLoggedIn()):
+            return User.objects.get(uid=self.getCurrentUsername())
+        else:
+            return None
 
-  def do_GET(self, post_vars={}):
-    # Get file
-    self.post_vars = post_vars
-    split_path = self.path.split('/')
-    base_dir = split_path[1] if (len(split_path) > 1) else ''
-    file_name = split_path[2] if len(split_path) == 3 else ''
+    def do_GET(self, post_vars={}):
+        # Get file
+        self.post_vars = post_vars
+        split_path = self.path.split('/')
+        base_dir = split_path[1] if (len(split_path) > 1) else ''
+        file_name = split_path[2] if len(split_path) == 3 else ''
 
-    if (base_dir == 'css'):
-      self.getFile('text/css', 'css', file_name)
+        if (base_dir == 'css'):
+            self.getFile('text/css', 'css', file_name)
 
-    elif (base_dir == 'js'):
-      self.getFile('text/javascript', 'js', file_name)
+        elif (base_dir == 'js'):
+            self.getFile('text/javascript', 'js', file_name)
 
-    elif (base_dir == 'logout'):
-      self.send_response(200)
-      self.getSession(clear_cookie=True)
-      self.end_headers()
-      self.sendLogin()
+        elif (base_dir == 'logout'):
+            self.send_response(200)
+            self.getSession(clear_cookie=True)
+            self.end_headers()
+            self.sendLogin()
 
-    elif (base_dir in ['', 'credit', 'logout', 'history', 'stock']):
-      self.getSession()
+        elif (base_dir in ['', 'credit', 'logout', 'history', 'stock']):
+            self.getSession()
 
-      if ('set_response' not in post_vars):
+            if ('set_response' not in post_vars):
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
+            if (not self.isLoggedIn()):
+                self.sendLogin()
+            else:
+                user_object = self.getCurrentUserObject()
+
+                if (base_dir == '' or base_dir == 'credit'):
+                    template = env.get_template('credit.html')
+                    inventory_items = Inventory.getAvailableItems()
+                    self.wfile.write(template.render(app_name=APP_NAME, inventory=inventory_items,
+                                                     page_name='Credit', user=self.getCurrentUserObject()))
+
+                elif (base_dir == 'history'):
+                    template = env.get_template('history.html')
+                    transaction_history = self.getCurrentUserObject().getTransactionHistory()
+
+                    if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
+                        page_number = int(split_path[2]) if len(split_path) == 3 else 1
+                        total_pages = int(math.ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
+                        page_data = self.getPageData(page_number, total_pages, '/history/%s')
+                        array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
+                        array_end = page_number * TRANSACTION_PAGE_SIZE
+                        transaction_history = transaction_history[array_start:array_end]
+
+                    else:
+                        page_data = []
+
+                    self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
+                                                     transaction_history=transaction_history,
+                                                     page_data=page_data))
+
+                elif (base_dir == 'stock'):
+                    template = env.get_template('stock.html')
+                    inventory_items = Inventory.objects.all().order_by('archive', 'name', '-quantity')
+                    active_items = Inventory.objects.filter(archive=False)
+                    self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
+                                                     inventory_items=inventory_items,
+                                                     active_items=active_items))
+
+        else:
+            self.send_response(404)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            template = env.get_template('404.html')
+            self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
+                                             path=self.path))
+
+        return
+
+    def getPageData(self, current_page, total_pages, url_template):
+        if (total_pages <= TOTAL_PAGE_DISPLAY):
+            page_range = range(1, total_pages + 1)
+        else:
+            pages_up_down = int(math.ceil((TOTAL_PAGE_DISPLAY - 1) / 2))
+            page_range = range(current_page - pages_up_down, current_page + pages_up_downs + 1)
+
+        page_data = []
+        for page_numer in page_range:
+            page_data.append(['active' if (page_numer == current_page) else '', url_template % page_numer, page_numer])
+
+        return page_data
+
+    def getPostVariables(self):
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={'REQUEST_METHOD':'POST',
+                     'CONTENT_TYPE':self.headers['Content-Type']})
+
+        variables = {}
+        for field in form.keys():
+            print form[field]
+            variables[field] = form[field].value
+        return variables
+
+    def do_POST(self):
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
+        self.getSession(True)
 
-      if (not self.isLoggedIn()):
-        self.sendLogin()
-      else:
-        user_object = self.getCurrentUserObject()
+        post_vars = {}
+        # Get file
+        split_path = self.path.split('/')
+        base_dir = split_path[1] if (len(split_path) > 1) else ''
+        file_name = split_path[2] if len(split_path) == 3 else ''
 
-        if (base_dir == '' or base_dir == 'credit'):
-          template = env.get_template('credit.html')
-          inventory_items = Inventory.getAvailableItems()
-          self.wfile.write(template.render(app_name=APP_NAME, inventory=inventory_items,
-                                           page_name='Credit', user=self.getCurrentUserObject()))
+        variables = self.getPostVariables()
 
-        elif (base_dir == 'history'):
-          template = env.get_template('history.html')
-          transaction_history = self.getCurrentUserObject().getTransactionHistory()
+        if ('action' in variables):
+            action = variables['action']
 
-          if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
-            page_number = int(split_path[2]) if len(split_path) == 3 else 1
-            total_pages = int(math.ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
-            page_data = self.getPageData(page_number, total_pages, '/history/%s')
-            array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
-            array_end = page_number * TRANSACTION_PAGE_SIZE
-            transaction_history = transaction_history[array_start:array_end]
+            # Handle login POST requests
+            if (action == 'login'):
+                post_vars['auth_failure'] = True
+                if ('password' in variables and 'username' in variables and
+                        self.login(variables['username'], variables['password'])):
+                    post_vars['auth_failure'] = False
 
-          else:
-            page_data = []
+            if (base_dir == 'credit' and action == 'pay' and 'amount' in variables):
+                self.getCurrentUserObject().removeCredit(float(variables['amount']))
+            elif (base_dir == 'credit' and action == 'pay' and 'item_id' in variables):
+                inventory_object = Inventory.objects.get(pk=variables['item_id'])
+                self.getCurrentUserObject().removeCredit(inventory=inventory_object)
+            elif (base_dir == 'stock'):
+                post_vars = self.processStockPostRequest(variables, post_vars)
 
-          self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
-                                           transaction_history=transaction_history,
-                                           page_data=page_data))
+        self.do_GET(post_vars=post_vars)
+        return
 
-        elif (base_dir == 'stock'):
-          template = env.get_template('stock.html')
-          inventory_items = Inventory.objects.all()
-          self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
-                                           inventory_items=inventory_items))
+    def login(self, username, password):
+        if (login(username, password)):
+            self.setSessionVar('username', username)
+            self.setSessionVar('password', password)
+            return True
+        else:
+            return False
 
-    else:
-      self.send_response(404)
-      self.send_header('Content-type', 'text/html')
-      self.end_headers()
-      template = env.get_template('404.html')
-      self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
-                                           path=self.path))
+    def processStockPostRequest(self, variables, post_vars):
+        action = None if 'action' not in variables else variables['action']
+        if (variables['action'] == 'Add Stock'):
+            if variables['quantity'] < 1 or not int(variables['quantity']):
+                post_vars['error'] = 'Quantity must be a positive integer'
+                return post_vars
 
-    return
+            quantity = int(variables['quantity'])
+            inventory_id = int(variables['inv_id'])
+            inventory_object = Inventory.objects.get(pk=inventory_id)
 
-  def getPageData(self, current_page, total_pages, url_template):
-    if (total_pages <= TOTAL_PAGE_DISPLAY):
-      page_range = range(1, total_pages + 1)
-    else:
-      pages_up_down = int(math.ceil((TOTAL_PAGE_DISPLAY - 1) / 2))
-      page_range = range(current_page - pages_up_down, current_page + pages_up_downs + 1)
+            getcontext().prec = 2
+            if (variables['cost_type'] == 'total'):
+                cost = Decimal(variables['cost_total'])
 
-    page_data = []
-    for page_numer in page_range:
-      page_data.append(['active' if (page_numer == current_page) else '', url_template % page_numer, page_numer])
+            elif (variables['cost_type'] == 'each'):
+                cost = (Decimal(variables['cost_each']) * quantity)
 
-    return page_data
+            inventory_object.addItems(quantity, self.getCurrentUserObject(), cost)
 
-  def getPostVariables(self):
-    form = cgi.FieldStorage(
-      fp=self.rfile,
-      headers=self.headers,
-      environ={'REQUEST_METHOD':'POST',
-               'CONTENT_TYPE':self.headers['Content-Type'],
-              })
-    variables = {}
-    for field in form.keys():
-      variables[field] = form[field].value
-    return variables
+        elif (action == 'update'):
+            if 'item_id' not in variables:
+                post_vars['error'] = 'Item ID not available'
+                return post_vars
+            item = Inventory.objects.get(pk=int(variables['item_id']))
+            item.name = variables['item_name']
+            getcontext().prec = 2
+            item.price = Decimal(variables['item_price'])
+            item.url = variables['image_url']
+            item.save()
 
-  def do_POST(self):
-    self.send_response(200)
-    self.getSession(True)
+        elif action == 'archive':
+            if 'item_id' not in variables:
+                post_vars['error'] = 'Item ID not available'
+                return post_vars
+            item = Inventory.objects.get(pk=int(variables['item_id']))
 
-    post_vars = {}
-    # Get file
-    split_path = self.path.split('/')
-    base_dir = split_path[1] if (len(split_path) > 1) else ''
-    file_name = split_path[2] if len(split_path) == 3 else ''
+            item.archive = (not item.archive)
+            item.save()
 
-    variables = self.getPostVariables()
+        elif action == 'delete':
+            if 'item_id' not in variables:
+                post_vars['error'] = 'Item ID not available'
+                return post_vars
+            item = Inventory.objects.get(pk=int(variables['item_id']))
+            if ((InventoryTransaction.objects.filter(inventory=item) or
+                 Transaction.objects.filter(inventory=item))):
+                post_vars['error'] = 'Cannot delete item that has transactions related to it'
+                return post_vars
+            item.delete()
 
-    if ('action' in variables):
-      action = variables['action']
+        elif action == 'create':
+            getcontext().prec = 2
+            item = Inventory(name=str(variables['item_name']), price=Decimal(variables['item_price']),
+                             image_url=str(variables['image_url']), archive=bool(variables['item_archive']))
 
-      # Handle login POST requests
-      if (action == 'login'):
-        post_vars['auth_failure'] = True
-        if ('password' in variables and 'username' in variables and self.login(variables['username'], variables['password'])):
-          post_vars['auth_failure'] = False
+            item.save()
 
-      if (base_dir == 'credit' and action == 'pay' and 'amount' in variables):
-        self.getCurrentUserObject().removeCredit(float(variables['amount']))
-      elif (base_dir == 'credit' and action == 'pay' and 'item_id' in variables):
-        inventory_object = Inventory.objects.get(pk=variables['item_id'])
-        self.getCurrentUserObject().removeCredit(inventory=inventory_object)
-
-    self.do_GET(post_vars=post_vars)
-    return
-
-  def login(self, username, password):
-    if (login(username, password)):
-      self.setSessionVar('username', username)
-      self.setSessionVar('password', password)
-      return True
-    else:
-      return False
+        return post_vars
 
 if (__name__ == '__main__'):
 
-  server_address = ('', 8000)
-  httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
-  httpd.serve_forever()
+    server_address = ('', 8000)
+    httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
+    httpd.serve_forever()

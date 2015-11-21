@@ -2,14 +2,9 @@ Todo
 ====
 
 * Backend:
-  * Split classes into seperate files
-  * Complete inventory work
-* Setup user panel:
-  * Chose items to purchase/general items
+  * Split into seperate files
 * Setup Admin panel
   * Add monies to user accounts
-  * Add items
-  * View/Edit transaction history and rebuild credit cache
 * Nigthly emails about lack of payment when buyer out of credit
 
 ## Future
@@ -25,3 +20,11 @@ Todo
 * Setup user panel:
   * See balance
 * Implement LDAP authentication
+* Backend:
+  * Split classes into seperate files
+  * Complete inventory work
+* Setup user panel:
+  * Chose items to purchase/general items
+* Setup Admin panel
+  * Add items
+  * View/Edit transaction history and rebuild credit cache
