@@ -384,9 +384,23 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             item.delete()
 
         elif action == 'create':
-            getcontext().prec = 2
-            item = Inventory(name=str(variables['item_name']), price=Decimal(variables['item_price']),
-                             image_url=str(variables['image_url']), archive=bool(variables['item_archive']))
+            if 'item_price' in variables:
+                price = int(variables['item_price'])
+            else:
+                price = 0
+
+            if 'item_archive' in variables:
+                archive = bool(variables['item_archive'])
+            else:
+                archive = False
+
+            if 'image_url' in  variables:
+                image_url = str(variables['image_url'])
+            else:
+                image_url = ''
+
+            item = Inventory(name=str(variables['item_name']), price=price,
+                             image_url=image_url, archive=archive)
 
             item.save()
 

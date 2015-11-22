@@ -1,1 +1,2 @@
 LDAP_SERVER = 'localhost'
+SHOW_OUT_OF_STOCK_ITEMS = True
