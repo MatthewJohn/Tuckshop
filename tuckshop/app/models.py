@@ -36,6 +36,8 @@ class User(models.Model):
       raise Exception('Cannot use negative number')
     self.credit += amount
     self.save()
+    transaction = Transaction(user=self, amount=amount, debit=False)
+    transaction.save()
     return self.credit
 
   def removeCredit(self, amount=None, inventory=None):
@@ -72,13 +74,30 @@ class User(models.Model):
   def getCreditString(self):
     return getMoneyString(self.credit)
 
-  def getTransactionHistory(self, date_from=None, date_to=None):
+  def getTransactionHistory(self, date_from=None, date_to=None,
+                            include_inventory_history=False):
     if date_from is None:
       date_from = datetime.datetime.fromtimestamp(0)
 
     if date_to is None:
       date_to = datetime.datetime.now()
-    return Transaction.objects.filter(user=self, timestamp__gte=date_from, timestamp__lte=date_to)
+
+    transactions = Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
+    if include_inventory_history:
+        inventory_transactions = InventoryTransaction.objects.filter(user=self, timestamp__gt=date_from,
+                                                                     timestamp__lt=date_to, approved=True)
+    else:
+      inventory_transactions = []
+
+    aggregate_transactions = []
+    for transaction in transactions:
+      aggregate_transactions.append(transaction)
+    for transaction in inventory_transactions:
+      aggregate_transactions.append(transaction)
+
+    aggregate_transactions = sorted(aggregate_transactions, key=lambda transaction: transaction.timestamp, reverse=True)
+
+    return aggregate_transactions
 
 
 class Inventory(models.Model):
@@ -112,6 +131,43 @@ class InventoryTransaction(models.Model):
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
   cost = models.IntegerField()
+  approved = models.BooleanField(default=False)
+  timestamp = models.DateTimeField(auto_now_add=True)
+
+  def toTimeString(self):
+    if (self.timestamp.date() == datetime.datetime.today().date()):
+      return self.timestamp.strftime("%H:%M")
+    else:
+      return self.timestamp.strftime("%d/%m/%y %H:%M")
+
+  def approve(self):
+    self.approved = True
+    self.save()
+    self.user.credit += self.cost
+    self.user.save()
+
+  class Meta:
+    ordering = ['-timestamp']
+
+  def __str__(self):
+    return self.toTimeString()
+
+  def getAmountString(self):
+    return getMoneyString(self.cost)
+
+  def getAdditionValue(self):
+     return self.cost
+
+  def getCurrentCredit(self):
+    credit = 0
+    transactions = self.user.getTransactionHistory(date_to=self.timestamp, include_inventory_history=True)
+    for transaction in transactions:
+      credit += transaction.getAdditionValue()
+    credit += self.getAdditionValue()
+    return credit
+
+  def getCurrentCreditString(self):
+    return getMoneyString(self.getCurrentCredit())
 
 class Transaction(models.Model):
   user = models.ForeignKey(User)
@@ -127,7 +183,7 @@ class Transaction(models.Model):
     return self.toTimeString()
 
   def getAmountString(self):
-    return getMoneyString(self.amount)
+    return getMoneyString(self.getAdditionValue())
 
   def getAdditionValue(self):
     if (self.debit):
@@ -137,7 +193,8 @@ class Transaction(models.Model):
 
   def getCurrentCredit(self):
     credit = 0
-    for transaction in Transaction.objects.filter(user=self.user, pk__lt=self.id):
+    transactions = self.user.getTransactionHistory(date_to=self.timestamp, include_inventory_history=True)
+    for transaction in transactions:
       credit += transaction.getAdditionValue()
     credit += self.getAdditionValue()
     return credit
