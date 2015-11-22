@@ -1,6 +1,6 @@
 from django.db import models
 
-from config import LDAP_SERVER
+from config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
 from functions import getMoneyString
 import ldap
 from decimal import Decimal
@@ -110,7 +110,11 @@ class Inventory(models.Model):
 
   @staticmethod
   def getAvailableItems():
-    return Inventory.objects.filter(quantity__gt=0).filter(archive=False)
+    items = Inventory.objects.filter(archive=False)
+    if not SHOW_OUT_OF_STOCK_ITEMS:
+      items = items.filter(quantity__gt=0)
+
+    return items
 
   def getSalePriceString(self):
     return getMoneyString(self.price, include_sign=False)
