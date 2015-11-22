@@ -3,7 +3,7 @@ from config import LDAP_SERVER
 def getMoneyString(credit, include_sign=True):
   text_color = 'green' if credit >= 0 else 'red'
 
-  if (credit <= -1):
+  if (credit < 0):
     credit_sign = '-'
     credit = 0 - credit
   else:

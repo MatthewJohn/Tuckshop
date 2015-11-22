@@ -156,6 +156,10 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         base_dir = split_path[1] if (len(split_path) > 1) else ''
         file_name = split_path[2] if len(split_path) == 3 else ''
 
+        valid_urls = ['', 'credit', 'logout', 'history', 'stock']
+        if self.isLoggedIn() and self.getCurrentUserObject().admin:
+            valid_urls.append('admin')
+
         if (base_dir == 'css'):
             self.getFile('text/css', 'css', file_name)
 
@@ -171,7 +175,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.end_headers()
             self.sendLogin()
 
-        elif (base_dir in ['', 'credit', 'logout', 'history', 'stock']):
+        elif (base_dir in valid_urls):
             self.getSession()
 
             if ('set_response' not in post_vars):
@@ -193,7 +197,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
                 elif (base_dir == 'history'):
                     template = env.get_template('history.html')
-                    transaction_history = self.getCurrentUserObject().getTransactionHistory()
+                    transaction_history = self.getCurrentUserObject().getTransactionHistory(include_inventory_history=True)
 
                     if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
                         page_number = int(split_path[2]) if len(split_path) == 3 else 1
@@ -217,6 +221,14 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
                                                      inventory_items=inventory_items,
                                                      active_items=active_items, error=post_vars['error']))
+
+                elif base_dir == 'admin' and user_object.admin:
+                    template = env.get_template('admin.html')
+                    users = User.objects.all()
+                    unapproved_transactions = InventoryTransaction.objects.filter(approved=False).order_by('-timestamp')
+                    self.wfile.write(template.render(app_name=APP_NAME, page_name='Admin',
+                                                     users=users, error=post_vars['error'],
+                                                     unapproved_transactions=unapproved_transactions))
 
         else:
             self.send_response(404)
@@ -280,6 +292,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 elif base_dir == 'stock':
                     post_vars = self.processStockPostRequest(variables, post_vars)
 
+                elif (base_dir == 'admin' and self.getCurrentUserObject().admin):
+                    post_vars = self.processAdminPostRequest(variables, post_vars)
+
         self.do_GET(post_vars=post_vars)
         return
 
@@ -290,6 +305,22 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return True
         else:
             return False
+
+    def processAdminPostRequest(self, variables, post_vars):
+
+        action = variables['action']
+        if action == 'approve':
+            inv_trans_object = InventoryTransaction.objects.get(pk=variables['transaction_id'])
+            inv_trans_object.approve()
+        elif action == 'Add':
+            user_object = User.objects.get(uid=variables['uid'])
+            user_object.addCredit(int(variables['amount']))
+        elif action == 'Remove':
+            user_object = User.objects.get(uid=variables['uid'])
+            user_object.removeCredit(int(variables['amount']))
+
+        return post_vars
+
 
     def processCreditPostRequest(self, variables, post_vars):
         action = variables['action']
@@ -313,12 +344,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             inventory_id = int(variables['inv_id'])
             inventory_object = Inventory.objects.get(pk=inventory_id)
 
-            getcontext().prec = 2
             if (variables['cost_type'] == 'total'):
-                cost = Decimal(variables['cost_total'])
+                cost = int(float(variables['cost_total']) * 100)
 
             elif (variables['cost_type'] == 'each'):
-                cost = (Decimal(variables['cost_each']) * quantity)
+                cost = (int(float(variables['cost_each']) * 100) * quantity)
 
             inventory_object.addItems(quantity, self.getCurrentUserObject(), cost)
 
