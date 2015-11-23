@@ -1,6 +1,7 @@
 from django.db import models
 
 from config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
+from tuckshop.app.redis_connection import RedisConnection
 from functions import getMoneyString
 import ldap
 from decimal import Decimal
@@ -90,31 +91,28 @@ class User(models.Model):
     if date_to is None:
       date_to = datetime.datetime.now()
 
-    transactions = Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
-    if include_inventory_history:
-        inventory_transactions = InventoryTransaction.objects.filter(user=self, timestamp__gt=date_from,
-                                                                     timestamp__lt=date_to, approved=True)
-    else:
-      inventory_transactions = []
-
-    aggregate_transactions = []
-    for transaction in transactions:
-      aggregate_transactions.append(transaction)
-    for transaction in inventory_transactions:
-      aggregate_transactions.append(transaction)
-
-    aggregate_transactions = sorted(aggregate_transactions, key=lambda transaction: transaction.timestamp, reverse=True)
-
-    return aggregate_transactions
+    return Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
 
 
 class Inventory(models.Model):
   name = models.CharField(max_length=200)
   bardcode_number = models.CharField(max_length=25, null=True)
-  price = models.IntegerField()
   image_url = models.CharField(max_length=250, null=True)
   quantity = models.IntegerField(default=0)
   archive = models.BooleanField(default=False)
+
+  current_price_cache_key = 'Inventory_%s_price'
+
+  def getCurrentPrice(self, refresh_cache=False):
+    if (not RedisConnection.exists(Inventory.current_price_cache_key % self.id) or refresh_cache):
+      current_price = self.getCurrentInventoryTransaction().sale_price
+      RedisConnection.set(Inventory.current_price_cache_key % self.id, current_price)
+      return current_price
+    else:
+      return RedisConnection.get(Inventory.current_price_cache_key % self.id)
+
+  def getCurrentInventoryTransaction(self, refresh_cache):
+    pass
 
   def getImageUrl(self):
     return self.image_url if self.image_url else 'http://www.onlineseowebservice.com/news/wp-content/themes/creativemag/images/default.png'
@@ -128,7 +126,7 @@ class Inventory(models.Model):
     return items
 
   def getSalePriceString(self):
-    return getMoneyString(self.price, include_sign=False)
+    return getMoneyString(self.getCurrentPrice(), include_sign=False)
 
   def addItems(self, quantity, user, cost):
     transaction = InventoryTransaction(inventory=self, user=user, quantity=quantity, cost=cost)
@@ -146,6 +144,7 @@ class InventoryTransaction(models.Model):
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
   cost = models.IntegerField()
+  sale_price = models.IntegerField(default=None, allow_null=True)
   approved = models.BooleanField(default=False)
   timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -173,14 +172,6 @@ class InventoryTransaction(models.Model):
   def getAdditionValue(self):
      return self.cost
 
-  def getCurrentCredit(self):
-    credit = 0
-    transactions = self.user.getTransactionHistory(date_to=self.timestamp, include_inventory_history=True)
-    for transaction in transactions:
-      credit += transaction.getAdditionValue()
-    credit += self.getAdditionValue()
-    return credit
-
   def getCurrentCreditString(self):
     return getMoneyString(self.getCurrentCredit())
 
@@ -188,7 +179,7 @@ class Transaction(models.Model):
   user = models.ForeignKey(User)
   amount = models.IntegerField()
   debit = models.BooleanField(default=True)
-  inventory = models.ForeignKey(Inventory, null=True)
+  inventory_transactions = models.ForeignKey(InventoryTransaction, null=True)
   timestamp = models.DateTimeField(auto_now_add=True)
 
   class Meta:
@@ -208,7 +199,7 @@ class Transaction(models.Model):
 
   def getCurrentCredit(self):
     credit = 0
-    transactions = self.user.getTransactionHistory(date_to=self.timestamp, include_inventory_history=True)
+    transactions = self.user.getTransactionHistory(date_to=self.timestamp)
     for transaction in transactions:
       credit += transaction.getAdditionValue()
     credit += self.getAdditionValue()
