@@ -5,6 +5,7 @@ from functions import getMoneyString
 import ldap
 from decimal import Decimal
 import datetime
+from os import environ
 
 # Create your models here.
 class User(models.Model):
@@ -16,19 +17,24 @@ class User(models.Model):
 
     user_object = super(User, self).__init__(*args, **kwargs)
 
-    # Obtain information from LDAP
-    ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
-    dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % self.uid
-    ldap_obj.simple_bind_s()
-    res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
-                            'uid=%s' % self.uid, ['mail', 'givenName'])
+    if not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
+      # Obtain information from LDAP
+      ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
+      dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % self.uid
+      ldap_obj.simple_bind_s()
+      res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
+                              'uid=%s' % self.uid, ['mail', 'givenName'])
 
-    if (not res):
-      raise Exception('User \'%s\' does not exist in LDAP' % self.uid)
+      if (not res):
+        raise Exception('User \'%s\' does not exist in LDAP' % self.uid)
 
-    self.dn = res[0][0]
-    self.display_name = res[0][1]['givenName'][0]
-    self.email = res[0][1]['mail'][0]
+      self.dn = res[0][0]
+      self.display_name = res[0][1]['givenName'][0]
+      self.email = res[0][1]['mail'][0]
+    else:
+      self.dn = 'uid=test'
+      self.display_name = 'Test User'
+      self.email = 'test@example.com'
 
   def addCredit(self, amount):
     amount = int(amount)
