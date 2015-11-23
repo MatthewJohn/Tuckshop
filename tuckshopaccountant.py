@@ -30,6 +30,7 @@ django.setup()
 from tuckshop.app.models import *
 from tuckshop.app.functions import *
 from tuckshop.app.config import *
+from tuckshop.app.redis_connection import RedisConnection
 
 TRANSACTION_PAGE_SIZE = 10
 TOTAL_PAGE_DISPLAY = 7
@@ -79,26 +80,18 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if (send_header):
                 self.send_header('Set-Cookie', cookie.output())
 
-        if (sid not in sessions):
-            sessions[sid] = {}
-
         if (clear_cookie):
-            del sessions[sid]
+            RedisConnection.delete(sid)
             cookie['sid'] = None
             self.send_header('Set-Cookie', cookie.output())
 
         return sid
 
     def getSessionVar(self, var):
-        session_var = self.getSession()
-
-        if (var in sessions[session_var]):
-            return sessions[session_var][var]
-        else:
-            return None
+        return RedisConnection.hget('session_' + self.getSession(), var) or None
 
     def setSessionVar(self, var, value):
-        sessions[self.getSession()][var] = value
+        RedisConnection.hset('session_' + self.getSession(), var, value)
 
     def getFile(self, content_type, base_dir, file_name):
         file_name = '%s/%s' % (base_dir, file_name)
@@ -142,13 +135,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def getCurrentUserObject(self):
         if (self.isLoggedIn()):
-            user_object = self.getSessionVar('user_object')
-            if (not user_object):
-                user_object = User.objects.get(uid=self.getCurrentUsername())
-                self.setSessionVar('user_object', user_object)
-            else:
-                user_object.refresh_from_db()
-            return user_object
+            return User.objects.get(uid=self.getCurrentUsername())
         else:
             return None
 
