@@ -3,9 +3,17 @@ Todo
 
 * Backend:
   * Split into seperate files
-* Setup Admin panel
-  * Add monies to user accounts
 * Nigthly emails about lack of payment when buyer out of credit
+
+### From Review:
+
+* ad:
+  * Add Float page:
+    * Items: name, stock quantity, cost, sale price
+    * Allow quantity adjust
+    * Total float value
+  * Add CSV export
+  * Change method of paying inv. transactions
 
 ## Future
 
@@ -28,3 +36,5 @@ Todo
 * Setup Admin panel
   * Add items
   * View/Edit transaction history and rebuild credit cache
+* Setup Admin panel
+  * Add monies to user accounts
