@@ -35,6 +35,8 @@ class User(models.Model):
       self.dn = 'uid=test'
       self.display_name = 'Test User'
       self.email = 'test@example.com'
+      if (self.uid == 'aa'):
+        self.admin = True
 
   def addCredit(self, amount):
     amount = int(amount)
