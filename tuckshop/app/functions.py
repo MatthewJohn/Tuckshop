@@ -1,4 +1,5 @@
 from config import LDAP_SERVER
+from os import environ
 
 def getMoneyString(credit, include_sign=True):
   text_color = 'green' if credit >= 0 else 'red'
@@ -23,12 +24,13 @@ def getMoneyString(credit, include_sign=True):
 def login(username, password):
   import ldap
   from models import User
-  ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
-  dn = 'uid=%s,ou=People,dc=example,dc=com' % username
-  try:
-    ldap_obj.simple_bind_s(dn, password)
-  except:
-    return False
+  if not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
+    ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
+    dn = 'uid=%s,ou=People,dc=example,dc=com' % username
+    try:
+      ldap_obj.simple_bind_s(dn, password)
+    except:
+      return False
 
   user_object = User.objects.filter(uid=username)
   if (not len(user_object)):
