@@ -36,7 +36,6 @@ TOTAL_PAGE_DISPLAY = 7
 LDAP_SERVER = 'localhost'
 APP_NAME = 'ITDev Tuck Shop'
 
-print os.environ
 # Setup listener for RFID to obtain login details
 # from asyncore import file_dispatcher, loop
 # from evdev import InputDevice, categorize, ecodes
