@@ -116,6 +116,9 @@ class Inventory(models.Model):
   quantity = models.IntegerField(default=0)
   archive = models.BooleanField(default=False)
 
+  def getImageUrl(self):
+    return self.image_url if self.image_url else 'http://www.onlineseowebservice.com/news/wp-content/themes/creativemag/images/default.png'
+
   @staticmethod
   def getAvailableItems():
     items = Inventory.objects.filter(archive=False)
