@@ -143,7 +143,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def getCurrentUserObject(self):
         if (self.isLoggedIn()):
-            return User.objects.get(uid=self.getCurrentUsername())
+            user_object = self.getSessionVar('user_object')
+            if (not user_object):
+                user_object = User.objects.get(uid=self.getCurrentUsername())
+                self.setSessionVar('user_object', user_object)
+            else:
+                user_object.refresh_from_db()
+            return user_object
         else:
             return None
 
