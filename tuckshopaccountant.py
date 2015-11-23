@@ -414,6 +414,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 if (__name__ == '__main__'):
 
-    server_address = ('', 8000)
+    server_address = ('', 5000)
     httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
     httpd.serve_forever()
