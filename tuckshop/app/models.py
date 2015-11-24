@@ -14,6 +14,8 @@ class User(models.Model):
   credit = models.IntegerField(default=0)
   admin = models.BooleanField(default=False)
 
+  current_credit_cache_key = 'User_%s_credit'
+
   def __init__(self, *args, **kwargs):
 
     user_object = super(User, self).__init__(*args, **kwargs)
@@ -39,20 +41,46 @@ class User(models.Model):
       if (self.uid == 'aa'):
         self.admin = True
 
+  def payForStock(self, amount):
+    pass
+
+  def getCurrentCredit(self, refresh_cache=False):
+    if (refresh_cache or
+        not RedisConnection.exists(User.current_credit_cache_key % self.id)):
+      balance = 0
+      for transaction in Transaction.objects.filter(user=self):
+        if (transaction.debit):
+          balance -= transaction.amount
+        else:
+          balance += transaction.amount
+
+      # Update cache
+      RedisConnection.set(User.current_credit_cache_key % self.id, balance)
+    else:
+      # Obtain credit from cache
+      balance = RedisConnection.get(User.current_credit_cache_key % self.id)
+    return balance
+
+
   def addCredit(self, amount):
     amount = int(amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
-    self.credit += amount
-    self.save()
+    current_credit = self.getCurrentCredit()
     transaction = Transaction(user=self, amount=amount, debit=False)
     transaction.save()
-    return self.credit
+
+    # Update credit cache
+    current_credit += amount
+    RedisConnection.set(User.current_credit_cache_key % self.id,
+                        current_credit)
+    return current_credit
 
   def removeCredit(self, amount=None, inventory=None):
     if (inventory and inventory.quantity <= 0):
       raise Exception('There are no items in stock')
 
+    current_credit = self.getCurrentCredit()
     transaction = Transaction(user=self, debit=True)
 
     if (inventory):
@@ -75,13 +103,15 @@ class User(models.Model):
       inventory.quantity -= 1
       inventory.save()
 
-    self.credit -= amount
-    self.save()
+    # Update credit cache
+    current_credit -= amount
+    RedisConnection.set(User.current_credit_cache_key % self.id,
+                        current_credit)
 
-    return self.credit
+    return current_credit
 
   def getCreditString(self):
-    return getMoneyString(self.credit)
+    return getMoneyString(self.getCurrentCredit())
 
   def getTransactionHistory(self, date_from=None, date_to=None,
                             include_inventory_history=False):
@@ -111,7 +141,7 @@ class Inventory(models.Model):
     else:
       return RedisConnection.get(Inventory.current_price_cache_key % self.id)
 
-  def getCurrentInventoryTransaction(self, refresh_cache):
+  def getCurrentInventoryTransaction(self, refresh_cache=False):
     pass
 
   def getImageUrl(self):
@@ -144,7 +174,7 @@ class InventoryTransaction(models.Model):
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
   cost = models.IntegerField()
-  sale_price = models.IntegerField(default=None, allow_null=True)
+  sale_price = models.IntegerField()
   approved = models.BooleanField(default=False)
   timestamp = models.DateTimeField(auto_now_add=True)
 
