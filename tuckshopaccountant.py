@@ -19,6 +19,7 @@ import datetime
 import random
 import sha
 import math
+import json
 import time
 from mimetypes import read_mime_types
 
@@ -209,9 +210,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     template = env.get_template('stock.html')
                     inventory_items = Inventory.objects.all().order_by('archive', 'name')
                     active_items = Inventory.objects.filter(archive=False)
+                    latest_transaction_data = self.getLatestTransactionData()
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
                                                      inventory_items=inventory_items,
-                                                     active_items=active_items, error=post_vars['error']))
+                                                     active_items=active_items, error=post_vars['error'],
+                                                     latest_transaction_data=json.dumps(latest_transaction_data)))
 
                 elif base_dir == 'admin' and user_object.admin:
                     template = env.get_template('admin.html')
@@ -230,6 +233,22 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                              path=self.path, error=post_vars['error']))
 
         return
+
+    def getLatestTransactionData(self):
+        latest_data = {}
+        for inventory in Inventory.objects.filter(archive=False):
+            latest_data[inventory.id] = []
+            transactions = InventoryTransaction.objects.filter(inventory=inventory).order_by('-timestamp')
+            if (len(transactions) > 5):
+                transactions = transactions[0:5]
+
+            for transaction in transactions:
+                latest_data[inventory.id].append([transaction.id, transaction.quantity, transaction.cost,
+                                                  transaction.sale_price, transaction.description])
+
+        return latest_data
+
+
 
     def getPageData(self, current_page, total_pages, url_template):
         if (total_pages <= TOTAL_PAGE_DISPLAY):
