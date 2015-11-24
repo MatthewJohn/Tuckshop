@@ -11,7 +11,6 @@ from os import environ
 # Create your models here.
 class User(models.Model):
   uid = models.CharField(max_length=10)
-  credit = models.IntegerField(default=0)
   admin = models.BooleanField(default=False)
 
   current_credit_cache_key = 'User_%s_credit'

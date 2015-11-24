@@ -3,6 +3,7 @@ import os
 import urlparse
 import redis
 
+
 class LocalRedis(object):
 
   def __init__(self):
