@@ -357,8 +357,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 return post_vars
             item = Inventory.objects.get(pk=int(variables['item_id']))
             item.name = variables['item_name']
-            getcontext().prec = 2
-            item.price = Decimal(variables['item_price'])
             item.url = variables['image_url']
             item.save()
 
