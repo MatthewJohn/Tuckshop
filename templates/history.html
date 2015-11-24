@@ -9,7 +9,7 @@
                                         {% for transaction in transaction_history %}
                                             <tr>
                                                 <td>{{ transaction.toTimeString() }}</td>
-                                                <td>{% if transaction.quantity %}Added stock '{{ transaction.inventory.name }}' (Quantity: {{ transaction.quantity }} ){% else %}{{ transaction.inventory.name }}{% endif %}</td>
+                                                <td>{{ transaction.inventory_transaction.inventory.name }}</td>
                                                 <td>{{ transaction.getAmountString() }}</td>
                                                 <td>{{ transaction.getCurrentCreditString() }}</td>
                                             </tr>

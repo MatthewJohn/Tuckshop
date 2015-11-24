@@ -188,7 +188,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
                 elif (base_dir == 'history'):
                     template = env.get_template('history.html')
-                    transaction_history = self.getCurrentUserObject().getTransactionHistory(include_inventory_history=True)
+                    transaction_history = self.getCurrentUserObject().getTransactionHistory()
 
                     if (len(transaction_history) > TRANSACTION_PAGE_SIZE):
                         page_number = int(split_path[2]) if len(split_path) == 3 else 1
