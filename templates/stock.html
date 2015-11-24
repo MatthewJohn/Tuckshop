@@ -1,5 +1,10 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+                    <script type="text/javascript">
+                    function update_common(item_id) {
+                    }
+                    </script>
                     <div class="row" id="central position-central">
                         <div class="col-md-12" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
                             <h2>Add Stock</h2>
@@ -8,10 +13,17 @@
                                     <span class="input-group-addon">
                                         <label for="inv_dropdown" >Item:</label>
                                     </span>
-                                    <select class="form-control" id="inv_dropdown" name="inv_id">
+                                    <select class="form-control" id="inv_dropdown" name="inv_id" onchange="update_common(this.value)">
                                         {% for item in active_items %}
                                         <option value="{{ item.id }}">{{ item.getDropdownName() }}</option>
                                         {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-lg-7 col-md-7 col-sm-10 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <label for="common_dropdown" >Common transactions:</label>
+                                    </span>
+                                    <select class="form-control" id="common_dropdown" name="inv_id" disabled>
                                     </select>
                                 </div>
                                 <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 input-group">
@@ -20,19 +32,32 @@
                                     </span>
                                     <input type="text" class="form-control" id="quantity_input" size="5" name="quantity" />
                                 </div>
-                                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12 input-group">
+                                <div class="col-lg-7 col-md-7 col-sm-10 col-xs-12 input-group">
                                     <span class="input-group-addon">
-                                        <input type="radio" selected="true" name="cost_type" value="total" aria-label="...">
+                                        <label for="sale_price_input">Sale price (blank for current price):</label>
+                                    </span>
+                                    <input type="text" class="form-control" id="sale_price_input" size="5" name="sale_price" />
+                                    <div class="input-group-addon">p</div>
+                                </div>
+                                <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <input type="radio" selected="true" name="cost_type" value="total" aria-label="..." selected>
                                         <label>Total Cost (&pound;):</label>
                                     </span>
                                     <input type="text" class="form-control" id="cost_input_total" size="5" name="cost_total" aria-describedby="cost-addon" />
                                 </div>
-                                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12 input-group">
+                                <div class="col-lg-4 col-md-6 col-sm-12 col-xs-12 input-group">
                                     <span class="input-group-addon">
                                         <input type="radio" selected="true" name="cost_type" value="each" aria-label="...">
                                         <label>Cost per Item: (&pound;):</label>
                                     </span>
                                     <input type="text" class="form-control" id="cost_input_each" size="5" name="cost_each" aria-describedby="cost-addon" />
+                                </div>
+                                <div class="col-lg-6 col-md-6 col-sm-10 col-xs-12 input-group">
+                                    <span class="input-group-addon">
+                                        <label for="description_input">Description:</label>
+                                    </span>
+                                    <input type="text" class="form-control" id="description_input" size="20" name="description" />
                                 </div>
                                 <input type="submit" name="action" value="Add Stock" class="btn btn-info" />
                             </form>
@@ -63,10 +88,10 @@
                                         <input type="text" class="form-control" name="item_name" value="{{ item.name }}" form="update_form_{{ item.id }}" size="8" />
                                     </td>
                                     <td>
-                                        {{ item.quantity }}
+                                        {{ item.getQuantityRemaining() }}
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control" name="item_price" value="{{ item.price }}" form="update_form_{{ item.id }}" size="5" />
+                                        {{ item.getPriceRangeString() }}
                                     </td>
                                     <td>
                                         <input type="text" class="form-control" name="image_url" value="{{ item.image_url }}" form="update_form_{{ item.id }}" size="8" />
@@ -91,8 +116,8 @@
                                 {% endfor %}
                                 <tr>
                                     <td><input type="text" class="form-control" name="item_name" placeholder="New Item..." form="new_item" size="8" /></td>
-                                    <td>0</td>
-                                    <td><input type="text" class="form-control" name="item_price" placeholder="Price" form="new_item" size="5" /></td>
+                                    <td>N/A</td>
+                                    <td>N/A</td>
                                     <td><input type="text" class="form-control" name="image_url" placeholder="Image URL" form="new_item" size="8" /></td>
                                     <td><input type="checkbox" class="form-control" name="item_archive" value="0" form="new_item" /></td>
                                     <td><input type="submit" class="btn btn-info" value="Create" form="new_item" />

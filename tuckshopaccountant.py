@@ -207,7 +207,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
                 elif (base_dir == 'stock'):
                     template = env.get_template('stock.html')
-                    inventory_items = Inventory.objects.all().order_by('archive', 'name', '-quantity')
+                    inventory_items = Inventory.objects.all().order_by('archive', 'name')
                     active_items = Inventory.objects.filter(archive=False)
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
                                                      inventory_items=inventory_items,
@@ -323,7 +323,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def processStockPostRequest(self, variables, post_vars):
         action = None if 'action' not in variables else variables['action']
         if (variables['action'] == 'Add Stock'):
-            if not int(variables['quantity'] or int(variables['quantity']) < 1):
+            if 'quantity' not in variables or not int(variables['quantity'] or int(variables['quantity']) < 1):
                 print "'I don't care"
                 post_vars['error'] = 'Quantity must be a positive integer'
                 return post_vars
@@ -331,6 +331,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             quantity = int(variables['quantity'])
             inventory_id = int(variables['inv_id'])
             inventory_object = Inventory.objects.get(pk=inventory_id)
+            description = None if 'description' not in variables else str(variables['description'])
 
             if (variables['cost_type'] == 'total'):
                 cost = int(float(variables['cost_total']) * 100)
@@ -338,7 +339,17 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             elif (variables['cost_type'] == 'each'):
                 cost = (int(float(variables['cost_each']) * 100) * quantity)
 
-            inventory_object.addItems(quantity, self.getCurrentUserObject(), cost)
+            if ('sale_price' in variables and variables['sale_price']):
+                sale_price = variables['sale_price']
+            else:
+                sale_price = inventory_object.getLatestSalePrice()
+
+            if sale_price is None:
+                post_vars['error'] = 'No previous stock for item - sale price must be specified'
+            else:
+                InventoryTransaction(inventory=inventory_object, user=self.getCurrentUserObject(),
+                                     quantity=quantity, cost=cost, sale_price=sale_price,
+                                     description=description).save()
 
         elif (action == 'update'):
             if 'item_id' not in variables:
@@ -366,29 +377,23 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 return post_vars
             item = Inventory.objects.get(pk=int(variables['item_id']))
             if ((InventoryTransaction.objects.filter(inventory=item) or
-                 Transaction.objects.filter(inventory=item))):
+                 Transaction.objects.filter(inventory_transaction__inventory=item))):
                 post_vars['error'] = 'Cannot delete item that has transactions related to it'
                 return post_vars
             item.delete()
 
         elif action == 'create':
-            if 'item_price' in variables:
-                price = int(variables['item_price'])
-            else:
-                price = 0
-
             if 'item_archive' in variables:
                 archive = bool(variables['item_archive'])
             else:
                 archive = False
 
-            if 'image_url' in  variables:
+            if 'image_url' in variables:
                 image_url = str(variables['image_url'])
             else:
                 image_url = ''
 
-            item = Inventory(name=str(variables['item_name']), price=price,
-                             image_url=image_url, archive=archive)
+            item = Inventory(name=str(variables['item_name']), image_url=image_url, archive=archive)
 
             item.save()
 
