@@ -203,14 +203,46 @@ class Inventory(models.Model):
       # from the last transaction
       transactions = InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp')
       if len(transactions):
-        price = transactions[0].sale_price
+        return  getMoneyString(transactions[0].sale_price, include_sign=False)
       else:
-        price = 'N/A'
+        return 'N/A'
 
-    return getMoneyString(price, include_sign=False)
+    else:
+      return getMoneyString(price, include_sign=False)
+
+  def getPriceRangeString(self):
+    inventory_transactions = InventoryTransaction.objects.filter(inventory=self).order_by('sale_price')
+    inventory_transaction_list = []
+    for inventory_transaction in inventory_transactions:
+      if (inventory_transaction.getQuantityRemaining()):
+        inventory_transaction_list.append(inventory_transaction)
+
+    if (len(inventory_transaction_list) == 0):
+      if (self.getLatestSalePrice()):
+        return self.getLatestSalePrice()
+      else:
+        return 'N/A'
+    elif (len(inventory_transaction_list) == 1):
+      return getMoneyString(inventory_transaction_list[0].sale_price, include_sign=False)
+    else:
+      sale_price_from = inventory_transaction_list[0].sale_price
+      sale_price_to = inventory_transaction_list[-1].sale_price
+      if (sale_price_from != sale_price_to):
+        return '%s - %s' % (getMoneyString(sale_price_from, include_sign=False),
+                            getMoneyString(sale_price_to, include_sign=False))
+      else:
+        return getMoneyString(sale_price_from, include_sign=False)
+
+
+  def getLatestSalePrice(self):
+    inventory_transactions = InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp')
+    if len(inventory_transactions):
+      return inventory_transactions[0].sale_price
+    else:
+      return None
 
   def getDropdownName(self):
-    return "%s (%i in stock)" % (self.name, self.quantity)
+    return "%s (%i in stock)" % (self.name, self.getQuantityRemaining())
 
 
 class InventoryTransaction(models.Model):
