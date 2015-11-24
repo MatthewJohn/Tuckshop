@@ -131,18 +131,54 @@ class Inventory(models.Model):
   quantity = models.IntegerField(default=0)
   archive = models.BooleanField(default=False)
 
-  current_price_cache_key = 'Inventory_%s_price'
+  inventory_transaction_cache_key = 'Inventory_%s_inventory_transaction'
 
-  def getCurrentPrice(self, refresh_cache=False):
-    if (not RedisConnection.exists(Inventory.current_price_cache_key % self.id) or refresh_cache):
-      current_price = self.getCurrentInventoryTransaction().sale_price
-      RedisConnection.set(Inventory.current_price_cache_key % self.id, current_price)
-      return current_price
+  def getSalePrice(self):
+    return self.getCurrentInventoryTransaction().sale_price
+
+  def getQuantityRemaining(self, include_all_transactions=True):
+    if (include_all_transactions):
+      quantity = 0
+      for transaction in InventoryTransaction.objects.filter(inventory=self):
+        quantity += transaction.getQuantityRemaining()
     else:
-      return RedisConnection.get(Inventory.current_price_cache_key % self.id)
+      quantity = self.getCurrentInventoryTransaction().getQuantityRemaining()
+    return quantity
+
 
   def getCurrentInventoryTransaction(self, refresh_cache=False):
-    pass
+    cache_key = InventoryTransaction.inventory_transaction_cache_key % self.id
+    cache_exists = RedisConnection.exists(cache_key)
+
+    # If the cache if to be refreshed or the cache has not been set,
+    # calculate the current inventory transaction for the item
+    if (refresh_cache or not cache_exists):
+
+      # Iterate through the inventory transactions for this item
+      for transaction in InventoryTransaction.filter(inventory=self).order_by('timestamp'):
+
+        # If the transaction has items left, set this as the current
+        # transaction and return it
+        if (transaction.getQuantityRemaining()):
+          RedisConnection.set(cache_key, transaction.id)
+          return transaction
+
+      # If no active transaction were found, clear the cache and
+      # return with None
+      if cache_exists:
+        RedisConnection.delete(cache_key)
+      return None
+    else:
+      transaction = Transaction.objects.get(pk=RedisConnection.get(cache_key))
+
+      # Ensure that the transaction has items left
+      if (transaction.getQuantityRemaining()):
+        # If so, return the transaction
+        return transaction
+      else:
+        # Otherwise, clear the cache and use this function to search for a new
+        # transaction
+        return self.getCurrentInventoryTransaction(refresh_cache=True)
 
   def getImageUrl(self):
     return self.image_url if self.image_url else 'http://www.onlineseowebservice.com/news/wp-content/themes/creativemag/images/default.png'
@@ -151,12 +187,14 @@ class Inventory(models.Model):
   def getAvailableItems():
     items = Inventory.objects.filter(archive=False)
     if not SHOW_OUT_OF_STOCK_ITEMS:
-      items = items.filter(quantity__gt=0)
+      for item in items:
+        if (not item.getCurrentInventoryTransaction().getQuantityRemaining()):
+          items.remove(item)
 
     return items
 
   def getSalePriceString(self):
-    return getMoneyString(self.getCurrentPrice(), include_sign=False)
+    return getMoneyString(self.getSalePrice(), include_sign=False)
 
   def addItems(self, quantity, user, cost):
     transaction = InventoryTransaction(inventory=self, user=user, quantity=quantity, cost=cost)
@@ -174,9 +212,13 @@ class InventoryTransaction(models.Model):
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
   cost = models.IntegerField()
+  paid = models.IntegerField(default=0)
   sale_price = models.IntegerField()
   approved = models.BooleanField(default=False)
   timestamp = models.DateTimeField(auto_now_add=True)
+
+  def getQuantityRemaining(self):
+    Transaction.objects.filter()
 
   def toTimeString(self):
     if (self.timestamp.date() == datetime.datetime.today().date()):
