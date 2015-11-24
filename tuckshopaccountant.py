@@ -356,11 +356,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 post_vars['error'] = 'Item ID not available'
                 return post_vars
             if 'item_name' not in variables:
-                post_vars['Item must have a name']
+                post_vars['error'] = 'Item must have a name'
                 return post_vars
             item = Inventory.objects.get(pk=int(variables['item_id']))
             item.name = variables['item_name']
-            item.url = None if 'image_url' not in variables['image_url']
+            item.url = None if 'image_url' not in variables else variables['image_url']
             item.save()
 
         elif action == 'archive':
