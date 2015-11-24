@@ -60,20 +60,18 @@ APP_NAME = 'ITDev Tuck Shop'
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
-sessions = {}
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def getSession(self, send_header=False, clear_cookie=False):
         cookie = Cookie.SimpleCookie()
-        cookie_found = False
+        sid = None
         if ('Cookie' in self.headers):
             cookie.load(self.headers.getheader('Cookie'))
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
-                cookie_found = True
 
-        if (not cookie_found):
+        if (not sid):
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             cookie['sid']['expires'] = 24 * 60 * 60
@@ -81,7 +79,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.send_header('Set-Cookie', cookie.output())
 
         if (clear_cookie):
-            RedisConnection.delete(sid)
+            RedisConnection.delete('session_' + self.getSession())
             cookie['sid'] = None
             self.send_header('Set-Cookie', cookie.output())
 
@@ -173,6 +171,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if ('set_response' not in post_vars):
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
+                self.getSession(send_header=True)
                 self.end_headers()
 
             if (not self.isLoggedIn()):
@@ -258,9 +257,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return variables
 
     def do_POST(self):
-        self.send_response(200)
-        self.getSession(True)
-
         post_vars = {}
         # Get file
         split_path = self.path.split('/')
