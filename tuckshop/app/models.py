@@ -76,17 +76,21 @@ class User(models.Model):
     return current_credit
 
   def removeCredit(self, amount=None, inventory=None):
-    if (inventory and inventory.quantity <= 0):
+    if (inventory and inventory.getQuantityRemaining() <= 0):
       raise Exception('There are no items in stock')
 
     current_credit = self.getCurrentCredit()
     transaction = Transaction(user=self, debit=True)
 
     if (inventory):
-      transaction.inventory = inventory
+      inventory_transaction = inventory.getCurrentInventoryTransaction()
+      if inventory_transaction is None:
+        raise Exception('No inventory transaction available for this item')
+
+      transaction.inventory_transaction = inventory_transaction
 
       if (not amount):
-        amount = inventory.price
+        amount = inventory_transaction.sale_price
 
     elif not amount:
       raise Exception('Must pass amount or inventory')
@@ -98,10 +102,6 @@ class User(models.Model):
     transaction.amount = amount
     transaction.save()
 
-    if (inventory):
-      inventory.quantity -= 1
-      inventory.save()
-
     # Update credit cache
     current_credit -= amount
     RedisConnection.set(User.current_credit_cache_key % self.id,
@@ -112,8 +112,7 @@ class User(models.Model):
   def getCreditString(self):
     return getMoneyString(self.getCurrentCredit())
 
-  def getTransactionHistory(self, date_from=None, date_to=None,
-                            include_inventory_history=False):
+  def getTransactionHistory(self, date_from=None, date_to=None):
     if date_from is None:
       date_from = datetime.datetime.fromtimestamp(0)
 
@@ -127,13 +126,15 @@ class Inventory(models.Model):
   name = models.CharField(max_length=200)
   bardcode_number = models.CharField(max_length=25, null=True)
   image_url = models.CharField(max_length=250, null=True)
-  quantity = models.IntegerField(default=0)
   archive = models.BooleanField(default=False)
 
   inventory_transaction_cache_key = 'Inventory_%s_inventory_transaction'
 
   def getSalePrice(self):
-    return self.getCurrentInventoryTransaction().sale_price
+    if self.getCurrentInventoryTransaction():
+      return self.getCurrentInventoryTransaction().sale_price
+    else:
+      return None
 
   def getQuantityRemaining(self, include_all_transactions=True):
     if (include_all_transactions):
@@ -146,7 +147,7 @@ class Inventory(models.Model):
 
 
   def getCurrentInventoryTransaction(self, refresh_cache=False):
-    cache_key = InventoryTransaction.inventory_transaction_cache_key % self.id
+    cache_key = Inventory.inventory_transaction_cache_key % self.id
     cache_exists = RedisConnection.exists(cache_key)
 
     # If the cache if to be refreshed or the cache has not been set,
@@ -154,7 +155,7 @@ class Inventory(models.Model):
     if (refresh_cache or not cache_exists):
 
       # Iterate through the inventory transactions for this item
-      for transaction in InventoryTransaction.filter(inventory=self).order_by('timestamp'):
+      for transaction in InventoryTransaction.objects.filter(inventory=self).order_by('timestamp'):
 
         # If the transaction has items left, set this as the current
         # transaction and return it
@@ -168,7 +169,7 @@ class Inventory(models.Model):
         RedisConnection.delete(cache_key)
       return None
     else:
-      transaction = Transaction.objects.get(pk=RedisConnection.get(cache_key))
+      transaction = InventoryTransaction.objects.get(pk=RedisConnection.get(cache_key))
 
       # Ensure that the transaction has items left
       if (transaction.getQuantityRemaining()):
@@ -180,6 +181,7 @@ class Inventory(models.Model):
         return self.getCurrentInventoryTransaction(refresh_cache=True)
 
   def getImageUrl(self):
+    # Return the image URL, if it exists. Else, return a default image
     return self.image_url if self.image_url else 'http://www.onlineseowebservice.com/news/wp-content/themes/creativemag/images/default.png'
 
   @staticmethod
@@ -193,64 +195,68 @@ class Inventory(models.Model):
     return items
 
   def getSalePriceString(self):
-    return getMoneyString(self.getSalePrice(), include_sign=False)
+    # Attempt to get the price from the current transaction
+    price = self.getSalePrice()
 
-  def addItems(self, quantity, user, cost):
-    transaction = InventoryTransaction(inventory=self, user=user, quantity=quantity, cost=cost)
-    transaction.save()
+    if price is None:
+      # If there is no current transaction, return the price
+      # from the last transaction
+      transactions = InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp')
+      if len(transactions):
+        price = transactions[0].sale_price
+      else:
+        price = 'N/A'
 
-    self.quantity += quantity
-    self.save()
+    return getMoneyString(price, include_sign=False)
 
   def getDropdownName(self):
     return "%s (%i in stock)" % (self.name, self.quantity)
 
 
 class InventoryTransaction(models.Model):
+  """Defines the Django model for Inventory Transactions"""
   inventory = models.ForeignKey(Inventory)
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
   cost = models.IntegerField()
   paid = models.IntegerField(default=0)
   sale_price = models.IntegerField()
-  approved = models.BooleanField(default=False)
   timestamp = models.DateTimeField(auto_now_add=True)
+  description = models.CharField(max_length=255, null=True)
 
   def getQuantityRemaining(self):
-    Transaction.objects.filter()
+    """Returns the quantity available to purchase from the
+       inventory transaction"""
+    # Determine the number of items reamining, by removing the number of transactions
+    # from the original amount available
+    transactions = Transaction.objects.filter(inventory_transaction=self)
+    return (self.quantity - len(transactions))
 
   def toTimeString(self):
+    """Converts the timestamp to a human-readable string"""
     if (self.timestamp.date() == datetime.datetime.today().date()):
       return self.timestamp.strftime("%H:%M")
     else:
       return self.timestamp.strftime("%d/%m/%y %H:%M")
 
-  def approve(self):
-    self.approved = True
-    self.save()
-    self.user.credit += self.cost
-    self.user.save()
-
   class Meta:
+    """Update the default ordering to reverse timestamp"""
     ordering = ['-timestamp']
 
   def __str__(self):
+    """By default, dispaly the object as the time string"""
     return self.toTimeString()
 
-  def getAmountString(self):
+  def getCostString(self):
+    """Get the cost as a human-readable string"""
     return getMoneyString(self.cost)
 
-  def getAdditionValue(self):
-     return self.cost
-
-  def getCurrentCreditString(self):
-    return getMoneyString(self.getCurrentCredit())
 
 class Transaction(models.Model):
   user = models.ForeignKey(User)
   amount = models.IntegerField()
   debit = models.BooleanField(default=True)
-  inventory_transactions = models.ForeignKey(InventoryTransaction, null=True)
+  inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
   timestamp = models.DateTimeField(auto_now_add=True)
 
   class Meta:

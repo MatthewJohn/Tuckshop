@@ -20,8 +20,8 @@
                                             <input type="hidden" name="action" value="pay" />
                                             <input type="hidden" name="item_id" value="{{ item.id }}" />
                                             <h3>{{ item.name }}</h3>
-                                            <p><input type="submit" class="btn btn-primary" value="{{ item.getSalePriceString() }}" role="button" {% if (not item.quantity) %}disabled{% endif %}/></p>
-                                            {% if (not item.quantity) %}Out of Stock{% endif %}
+                                            <p><input type="submit" class="btn btn-primary" value="{{ item.getSalePriceString() }}" role="button" {% if (not item.getQuantityRemaining()) %}disabled{% endif %}/></p>
+                                            {% if (not item.getQuantityRemaining()) %}Out of Stock{% endif %}
                                         </form>
                                     </div>
                                 </div>
