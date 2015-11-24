@@ -3,6 +3,44 @@ import os
 import urlparse
 import redis
 
+class LocalRedis(object):
+
+  def __init__(self):
+    self.cache = {}
+
+  def hset(self, name, key, value):
+    if (name not in self.cache):
+      self.cache[name] = {}
+    self.cache[name] = value
+    return True
+
+  def hget(self, name, key):
+    if (name in self.cache and key in self.cache[name]):
+      return self.cache[name][key]
+    else:
+      return None
+
+  def set(self, key, value):
+    self.cache[key] = value
+    return True
+
+  def get(key):
+    if key in self.cache:
+      return self.cache[key]
+    else:
+      return None
+
+  def delete(names):
+    for name in names:
+      if name in self.cache:
+        del(self.cache[name])
+
+    return True
+
+  def exists(name):
+    return (name in self.cache)
+
+
 class RedisConnection(object):
 
   CONNECTION = None
@@ -14,7 +52,7 @@ class RedisConnection(object):
         url = urlparse.urlparse(url=os.environ['REDIS_URL'])
         RedisConnection.CONNECTION = redis.Redis(host=url.hostname, port=url.port)
       else:
-        redis_url = redis.Redis('localhost', port=6379)
+        RedisConnection.CONNECTION = LocalRedis()
 
     return RedisConnection.CONNECTION
 
