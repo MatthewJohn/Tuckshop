@@ -11,7 +11,7 @@ class LocalRedis(object):
   def hset(self, name, key, value):
     if (name not in self.cache):
       self.cache[name] = {}
-    self.cache[name] = value
+    self.cache[name][key] = value
     return True
 
   def hget(self, name, key):
@@ -24,20 +24,20 @@ class LocalRedis(object):
     self.cache[key] = value
     return True
 
-  def get(key):
+  def get(self, key):
     if key in self.cache:
       return self.cache[key]
     else:
       return None
 
-  def delete(names):
+  def delete(self, names):
     for name in names:
       if name in self.cache:
         del(self.cache[name])
 
     return True
 
-  def exists(name):
+  def exists(self, name):
     return (name in self.cache)
 
 
