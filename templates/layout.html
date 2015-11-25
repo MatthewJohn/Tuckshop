@@ -11,14 +11,13 @@
     <body>
         <div class="container-fluid">
             <div id="background-image" class="col-md-6 hidden-sm hidden-xs"></div>
-            {% if error %}
-            <div class="alert alert-danger" role="alert">
-                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-                <span class="sr-only">Error:</span>
-                {{ error }}
-            </div>
-            {% endif %}
             <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+            {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error }}</div>
+            {% endif %}
+            {% if warning %}
+            <div class="alert alert-warning" role="alert">{{ warning }}</div>
+            {% endif %}
 {% block content %}{% endblock %}
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">

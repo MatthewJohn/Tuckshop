@@ -137,6 +137,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # Get file
         if 'error' not in post_vars:
             post_vars['error'] = None
+        if 'warning' not in post_vars:
+            post_vars['warning'] = None
         self.post_vars = post_vars
         split_path = self.path.split('/')
         base_dir = split_path[1] if (len(split_path) > 1) else ''
@@ -214,10 +216,15 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 elif base_dir == 'admin' and user_object.admin:
                     template = env.get_template('admin.html')
                     users = User.objects.all()
-                    unapproved_transactions = InventoryTransaction.objects.filter(approved=False).order_by('-timestamp')
+                    unpaid_users = []
+                    for user in User.objects.all():
+                        if len(user.getUnpaidTransactions()):
+                            unpaid_users.append(user)
+
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Admin',
                                                      users=users, error=post_vars['error'],
-                                                     unapproved_transactions=unapproved_transactions))
+                                                     warning=post_vars['warning'],
+                                                     unpaid_users=unpaid_users))
 
         else:
             self.send_response(404)
@@ -245,8 +252,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 break
 
         return latest_data
-
-
 
     def getPageData(self, current_page, total_pages, url_template):
         if (total_pages <= TOTAL_PAGE_DISPLAY):
@@ -312,11 +317,21 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return False
 
     def processAdminPostRequest(self, variables, post_vars):
-
         action = variables['action']
-        if action == 'approve':
-            inv_trans_object = InventoryTransaction.objects.get(pk=variables['transaction_id'])
-            inv_trans_object.approve()
+        if action == 'pay_stock':
+            if 'amount' not in variables or not float(variables['amount']):
+                post_vars['error'] = 'Amount to pay must be specified and be a positive amount'
+                return post_vars
+            amount = int(float(variables['amount']) * 100)
+            user = User.objects.get(uid=variables['uid'])
+            amount, semi_paid_transaction = user.payForStock(amount)
+            if semi_paid_transaction:
+                post_vars['warning'] = 'Not enough to fully pay transaction: %s (%s paid)' % (semi_paid_transaction,
+                                                                                              getMoneyString(amount,
+                                                                                                             include_sign=False))
+            elif amount:
+                post_vars['warning'] = '%s left after paying for all transactions' % getMoneyString(amount, include_sign=False)
+
         elif action == 'Add':
             user_object = User.objects.get(uid=variables['uid'])
             user_object.addCredit(int(variables['amount']))
@@ -341,7 +356,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         action = None if 'action' not in variables else variables['action']
         if (variables['action'] == 'Add Stock'):
             if 'quantity' not in variables or not int(variables['quantity'] or int(variables['quantity']) < 1):
-                print "'I don't care"
                 post_vars['error'] = 'Quantity must be a positive integer'
                 return post_vars
 

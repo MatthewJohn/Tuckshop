@@ -40,8 +40,54 @@ class User(models.Model):
       if (self.uid == 'aa'):
         self.admin = True
 
-  def payForStock(self, amount):
-    pass
+  def payForStock(self, amount, pay_to_credit=False):
+    if amount < 0:
+      raise Exception('Amount must be a positive')
+
+    unpaid_transactions = self.getUnpaidTransactions()
+    semi_paid_transaction = None
+    for transaction in unpaid_transactions:
+      partial_payment = (transaction.paid != 0)
+      transaction_amount = 0
+      if transaction.getRemainingCost() > amount:
+        transaction.paid += amount
+        transaction_amount = amount
+        transaction_description = 'Not fully Paid'
+        semi_paid_transaction = transaction
+      else:
+        transaction_amount = transaction.getRemainingCost()
+        transaction_description = 'Fully Paid'
+        transaction.paid = transaction.cost
+
+      transaction_description = 'Paid for stock (%s x %s): %s (%s%s)' % (transaction.inventory.name,
+                                                                         transaction.quantity,
+                                                                         getMoneyString(transaction_amount,
+                                                                                        include_sign=False),
+                                                                         'Partial payment, ' if partial_payment else '',
+                                                                         transaction_description)
+      credit_amount = transaction_amount if pay_to_credit else 0
+      Transaction(user=self, amount=credit_amount, debit=False,
+                  description=transaction_description).save()
+      transaction.save()
+
+      if semi_paid_transaction:
+        break
+      else:
+        amount -= transaction_amount
+
+    return amount, semi_paid_transaction
+
+  def getTotalOwed(self):
+    amount_owned = 0
+    for unpaid_transaction in self.getUnpaidTransactions():
+      amount_owned += unpaid_transaction.getRemainingCost()
+    return amount_owned
+
+  def getTotalOwedString(self):
+    return getMoneyString(self.getTotalOwed(), include_sign=False)
+
+  def getUnpaidTransactions(self):
+    return InventoryTransaction.objects.filter(user=self).exclude(paid=models.F('cost')).order_by('-paid', '-timestamp')
 
   def getCurrentCredit(self, refresh_cache=False):
     if (refresh_cache or
@@ -59,7 +105,6 @@ class User(models.Model):
       # Obtain credit from cache
       balance = RedisConnection.get(User.current_credit_cache_key % self.id)
     return balance
-
 
   def addCredit(self, amount):
     amount = int(amount)
@@ -233,7 +278,6 @@ class Inventory(models.Model):
       else:
         return getMoneyString(sale_price_from, include_sign=False)
 
-
   def getLatestSalePrice(self):
     inventory_transactions = InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp')
     if len(inventory_transactions):
@@ -281,7 +325,13 @@ class InventoryTransaction(models.Model):
 
   def getCostString(self):
     """Get the cost as a human-readable string"""
-    return getMoneyString(self.cost)
+    return getMoneyString(self.cost, include_sign=False)
+
+  def getRemainingCost(self):
+    return (self.cost - self.paid)
+
+  def getCostRemainingString(self):
+    return getMoneyString(self.getRemainingCost(), include_sign=False)
 
 
 class Transaction(models.Model):
@@ -289,6 +339,7 @@ class Transaction(models.Model):
   amount = models.IntegerField()
   debit = models.BooleanField(default=True)
   inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
+  description = models.CharField(max_length=255, null=True)
   timestamp = models.DateTimeField(auto_now_add=True)
 
   class Meta:

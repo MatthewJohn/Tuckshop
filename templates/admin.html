@@ -4,48 +4,64 @@
                         <div class="col-md-12">
                             <h2>Users</h2>
                             <table class="table">
-                              <tr><th>Username</th><th>Admin Status</th><th>Balance</th><th>Adjust Blanace</th></tr>
+                                <tr><th>Username</th><th>Admin Status</th><th>Balance</th><th>Adjust Blanace</th></tr>
                                 {% for user in users %}
                                 <tr>
-                                  <form action="/admin" method="post">
-                                    <input type="hidden" name="uid" value="{{ user.uid }}" />
-                                    <td>{{ user.uid }}</td>
-                                    <td><span class="glyphicon glyphicon-{% if user.admin %}ok{% else %}ban{% endif %}-circle"></span>
-                                    <td>{{ user.getCreditString() }}</td>
-                                    <td>
-                                      <div class="input-group">
-                                        <input type="text" class="form-control" name="amount" placeholder="60" size="6"/>
-                                        <div class="input-group-addon">p</div>
-                                      </div>
-                                    </td>
-                                    <td>
-                                      <input class="btn btn-warning" type="submit" name="action" value="Add" />
-                                      <input class="btn btn-info" type="submit" name="action" value="Remove" />
-                                    </td>
-                                  </form>
+                                    <form action="/admin" method="post">
+                                        <input type="hidden" name="uid" value="{{ user.uid }}" />
+                                        <td>{{ user.uid }}</td>
+                                        <td><span class="glyphicon glyphicon-{% if user.admin %}ok{% else %}ban{% endif %}-circle"></span>
+                                        <td>{{ user.getCreditString() }}</td>
+                                        <td>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" name="amount" placeholder="60" size="6"/>
+                                                <div class="input-group-addon">p</div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <input class="btn btn-warning" type="submit" name="action" value="Add" />
+                                            <input class="btn btn-info" type="submit" name="action" value="Remove" />
+                                        </td>
+                                    </form>
                                 </tr>
                                 {% endfor %}
                             </table>
-                            <h2>Unapproved Stock</h2>
-                            <table class="table">
-                              <tr><th>Date</th><th>User</th><th>Item</th><th>Quantity</th><th>Total</th><th>Approve</th></tr>
-                              {% for transaction in unapproved_transactions %}
-                              <tr>
-                                <td>{{ transaction.toTimeString() }}</td>
-                                <td>{{ transaction.user.uid }}</td>
-                                <td>{{ transaction.inventory.name }}</td>
-                                <td>{{ transaction.quantity }}</td>
-                                <td>{{ transaction.getAmountString() }}</td>
-                                <td>
-                                  <form action="/admin" method="post">
-                                    <input type="hidden" name="action" value="approve" />
-                                    <input type="hidden" name="transaction_id" value="{{ transaction.id }}" />
-                                    <input class="btn btn-warning" type="submit" value="Approve" />
-                                  </form>
-                                </td>
-                              </tr>
-                              {% endfor %}
-                            </table>
+                            <h2>Unpaid Stock</h2>
+                            {% for user in unpaid_users %}
+                            <div class="col-md-12">
+                                <h3>{{ user.uid }}</h3>
+                                <table class="table">
+                                    <tr><th>Date</th><th>Item</th><th>Quantity</th><th>Quantity Remaining</th><th>Total</th><th>Remaining to pay</th></tr>
+                                    {% for transaction in user.getUnpaidTransactions() %}
+                                    <tr>
+                                        <td>{{ transaction.toTimeString() }}</td>
+                                        <td>{{ transaction.inventory.name }}</td>
+                                        <td>{{ transaction.quantity }}</td>
+                                        <td>{{ transaction.getQuantityRemaining() }}
+                                        <td>{{ transaction.getCostString() }}</td>
+                                        <td>{{ transaction.getCostRemainingString() }}
+                                    </tr>
+                                    {% endfor %}
+                                    <tr>
+                                      <td></td><td></td><td></td><td></td><td>Total</td><td>{{ user.getTotalOwedString() }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-lg-5 col-md-6 col-sm-10 sol-xs-12">
+                                <form action="/admin" method="post">
+                                    <input type="hidden" name="action" value="pay_stock" />
+                                    <input type="hidden" name="uid" value="{{ user.uid }}" />
+                                    <div class="form-group">
+                                        <span for="pay_amount_input">Amount to Pay</span>
+                                        <div class="input-group">
+                                            <div class="input-group-addon">&pound;</div>
+                                            <input type="text" class="form-control" name="amount" id="pay_amount_input" placeholder="10.00" />
+                                        </div>
+                                    </div>
+                                    <input class="btn btn-info" type="submit" value="Pay {{ user.uid }}" />
+                                </form>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
 
