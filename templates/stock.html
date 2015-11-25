@@ -2,9 +2,63 @@
 {% block content %}
                     <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
                     <script type="text/javascript">
-                    var latest_transaction_data = '{{ latest_transaction_data }}';
+                    var latest_transactions_data = '{{ latest_transaction_data }}';
+                    var latest_transactions = JSON.parse(latest_transactions_data);
                     function update_common(item_id) {
+                        var select = document.getElementById("common_dropdown");
+                        var length = select.options.length;
+                        for (i = 0; i < length; i++) {
+                            select.options[i] = null;
+                        }
 
+                        var option = document.createElement("option");
+                        option.text = "None";
+                        option.value = '["0"]';
+                        select.add(option);
+                        if (latest_transactions[item_id].length > 0)
+                        {
+                            latest_transactions[item_id].forEach(function(element, index, array){
+                                var option = document.createElement("option");
+                                option.text = "Quantity: " + element[1] + ", Cost (each): " + element[2] + ", Sale Price: " + element[3] + "p, " + element[4];
+                                option.value = JSON.stringify(element);
+                                select.add(option);
+                            });
+                            select.disabled = false;
+                        }
+                        else
+                        {
+                            select.disabled = true;
+                        }
+                    }
+
+                    function update_fields(common_data_string)
+                    {
+                        var common_data = JSON.parse(common_data_string);
+                        var common_id = common_data[0];
+                        var quantity = document.getElementById("quantity_input");
+                        var sale_price = document.getElementById("sale_price_input");
+                        var total_cost_radio = document.getElementById("total_cost_radio");
+                        var cost_total = document.getElementById("cost_input_total");
+                        var cost_each = document.getElementById("cost_input_each");
+                        var description = document.getElementById("description_input");
+                        var inv_dropdown = document.getElementById("inv_dropdown");
+                        if (common_id == "0")
+                        {
+                            quantity.value = "";
+                            sale_price.value = "";
+                            cost_total.value = "";
+                            cost_each.value = "";
+                            description.value = "";
+                        }
+                        else
+                        {
+                            total_cost_radio.checked = true;
+                            cost_each.value = "";
+                            quantity.value = common_data[1];
+                            cost_total.value = common_data[2];
+                            sale_price.value = common_data[3];
+                            description.value = common_data[4];
+                        }
                     }
                     </script>
                     <div class="row" id="central position-central">
@@ -25,7 +79,7 @@
                                     <span class="input-group-addon">
                                         <label for="common_dropdown" >Common transactions:</label>
                                     </span>
-                                    <select class="form-control" id="common_dropdown" name="inv_id" disabled>
+                                    <select class="form-control" id="common_dropdown" onchange="update_fields(this.value)" disabled>
                                     </select>
                                 </div>
                                 <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 input-group">
@@ -43,7 +97,7 @@
                                 </div>
                                 <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12 input-group">
                                     <span class="input-group-addon">
-                                        <input type="radio" checked="checked" name="cost_type" value="total" aria-label="...">
+                                        <input type="radio" checked="checked" name="cost_type" id="total_cost_radio" value="total" aria-label="...">
                                         <label>Total Cost (&pound;):</label>
                                     </span>
                                     <input type="text" class="form-control" id="cost_input_total" size="5" name="cost_total" aria-describedby="cost-addon" />
