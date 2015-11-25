@@ -9,7 +9,7 @@
                                         {% for transaction in transaction_history %}
                                             <tr>
                                                 <td>{{ transaction.toTimeString() }}</td>
-                                                <td>{{ transaction.inventory_transaction.inventory.name }}</td>
+                                                <td>{% if transaction.description %}{{ transaction.description }}{% elif transaction.inventory_transaction %}{{ transaction.inventory_transaction.inventory.name }}{% endif %}</td>
                                                 <td>{{ transaction.getAmountString() }}</td>
                                                 <td>{{ transaction.getCurrentCreditString() }}</td>
                                             </tr>
