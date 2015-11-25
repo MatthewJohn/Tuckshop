@@ -239,12 +239,15 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         for inventory in Inventory.objects.filter(archive=False):
             latest_data[inventory.id] = []
             transactions = InventoryTransaction.objects.filter(inventory=inventory).order_by('-timestamp')
-            if (len(transactions) > 5):
-                transactions = transactions[0:5]
-
+            duplicate_info_list = []
             for transaction in transactions:
-                latest_data[inventory.id].append([transaction.id, transaction.quantity, transaction.cost,
-                                                  transaction.sale_price, transaction.description])
+                duplicate_info = '%s_%s_%s_%s' % (transaction.quantity, transaction.sale_price, transaction.cost, transaction.description)
+                if duplicate_info not in duplicate_info_list:
+                    duplicate_info_list.append(duplicate_info)
+                    latest_data[inventory.id].append([transaction.id, transaction.quantity, float(transaction.cost) / 100,
+                                                      transaction.sale_price, transaction.description])
+            if (len(latest_data[inventory.id]) == 5):
+                break
 
         return latest_data
 
