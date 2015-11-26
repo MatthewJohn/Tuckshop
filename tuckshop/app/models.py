@@ -44,30 +44,20 @@ class User(models.Model):
     if amount < 0:
       raise Exception('Amount must be a positive')
 
-    unpaid_transactions = self.getUnpaidTransactions()
     semi_paid_transaction = None
-    for transaction in unpaid_transactions:
-      partial_payment = (transaction.paid != 0)
+    for transaction in self.getUnpaidTransactions():
+      partial_payment = bool(transaction.getAmountPaid())
       transaction_amount = 0
       if transaction.getRemainingCost() > amount:
-        transaction.paid += amount
         transaction_amount = amount
-        transaction_description = 'Not fully Paid'
         semi_paid_transaction = transaction
+        fully_paid = False
       else:
         transaction_amount = transaction.getRemainingCost()
-        transaction_description = 'Fully Paid'
-        transaction.paid = transaction.cost
+        fully_paid = True
 
-      transaction_description = 'Paid for stock (%s x %s): %s (%s%s)' % (transaction.inventory.name,
-                                                                         transaction.quantity,
-                                                                         getMoneyString(transaction_amount,
-                                                                                        include_sign=False),
-                                                                         'Partial payment, ' if partial_payment else '',
-                                                                         transaction_description)
-      credit_amount = transaction_amount if pay_to_credit else 0
-      Transaction(user=self, amount=credit_amount, debit=False,
-                  description=transaction_description).save()
+      StockPayment(user=self, inventory_transaction=transaction, amount=transaction_amount,
+                   fully_paid=fully_paid, installment=bool(semi_paid_transaction)).save()
       transaction.save()
 
       if semi_paid_transaction:
@@ -87,7 +77,7 @@ class User(models.Model):
     return getMoneyString(self.getTotalOwed(), include_sign=False)
 
   def getUnpaidTransactions(self):
-    return InventoryTransaction.objects.filter(user=self).exclude(paid=models.F('cost')).order_by('-paid', 'timestamp')
+    return InventoryTransaction.objects.filter(user=self).annotate(amount_paid=models.Sum('stockpayment__amount')).order_by('-amount_paid', 'timestamp')
 
   def getCurrentCredit(self, refresh_cache=False):
     if (refresh_cache or
@@ -295,7 +285,6 @@ class InventoryTransaction(models.Model):
   user = models.ForeignKey(User)
   quantity = models.IntegerField()
   cost = models.IntegerField()
-  paid = models.IntegerField(default=0)
   sale_price = models.IntegerField()
   timestamp = models.DateTimeField(auto_now_add=True)
   description = models.CharField(max_length=255, null=True)
@@ -327,8 +316,11 @@ class InventoryTransaction(models.Model):
     """Get the cost as a human-readable string"""
     return getMoneyString(self.cost, include_sign=False)
 
+  def getAmountPaid(self):
+    return StockPayment.objects.filter(inventory_transaction=self).aggregate(models.Sum('amount'))['amount__sum'] or 0
+
   def getRemainingCost(self):
-    return (self.cost - self.paid)
+    return (self.cost - self.getAmountPaid())
 
   def getCostRemainingString(self):
     return getMoneyString(self.getRemainingCost(), include_sign=False)
@@ -373,6 +365,17 @@ class Transaction(models.Model):
       return self.timestamp.strftime("%H:%M")
     else:
       return self.timestamp.strftime("%d/%m/%y %H:%M")
+
+
+class StockPayment(models.Model):
+  user = models.ForeignKey(User)
+  inventory_transaction = models.ForeignKey(InventoryTransaction)
+  amount = models.IntegerField()
+  fully_paid = models.BooleanField(default=False)
+  installment = models.BooleanField(default=False)
+  description = models.CharField(max_length=255, null=True)
+  timestamp = models.DateTimeField(auto_now_add=True)
+
 
 class Token(models.Model):
   user = models.ForeignKey(User)
