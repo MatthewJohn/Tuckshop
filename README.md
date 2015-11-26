@@ -17,17 +17,9 @@ Todo
  * Confirmation message about adding stock
  * Admin page confirmations
  * Order payments by 'sold out', 
- * Stock being used in incorrect order
- * Fully pay one item, null transaction for next stock tranasaction
  * Desciprtion for custom amount pay
  * Change custom amount pay disabnle option
  * Add description to balance adjust
- * Change stock paying transaction (Twix x 10) to (Twix * 10)
- * Not fully payed -> Partially Paid
- * Fully Paid -> Fully Paid
- * Partial Payament -> (in installments)
-
- * Move stock transactions to new table
  * Add stock credit
 
 ## Future

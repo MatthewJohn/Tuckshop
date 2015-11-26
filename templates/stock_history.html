@@ -2,16 +2,16 @@
 {% block content %}
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
-                            <h2>Transaction History</h2>
+                            <h2>Stock Payment History</h2>
                             <table class="table">
-                                <tr><th>Date/Time</th><th>Item</th><th>Amount</th><th>Balance</th></tr>
-                                    {% if transaction_history %}
-                                        {% for transaction in transaction_history %}
+                                <tr><th>Date/Time</th><th>Payment Description</th><th>Amount</th><th>Notes</th></tr>
+                                    {% if payements %}
+                                        {% for payment in payements %}
                                             <tr>
-                                                <td>{{ transaction.toTimeString() }}</td>
-                                                <td>{% if transaction.description %}{{ transaction.description }}{% elif transaction.inventory_transaction %}{{ transaction.inventory_transaction.inventory.name }}{% endif %}</td>
-                                                <td>{{ transaction.getAmountString() }}</td>
-                                                <td>{{ transaction.getCurrentCreditString() }}</td>
+                                                <td>{{ payment.toTimeString() }}</td>
+                                                <td>{% if payment.description %}{{ payment.description }}{% elif payment.inventory_transaction %}{{ payment.inventory_transaction.getDescriptiveTitle() }}{% endif %}</td>
+                                                <td>{{ payment.getAmountString() }}</td>
+                                                <td>{{ payment.getNotes() }}</td>
                                             </tr>
                                     {% endfor %}
                                 </table>
@@ -28,7 +28,6 @@
                                   </ul>
                                 </nav>
                             {% endif %}
-                            <span>See <a href='/stock-history'>Stock Payment History</a></span>
                         </div>
                     </div>
 {% endblock %}
