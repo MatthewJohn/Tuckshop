@@ -144,7 +144,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         base_dir = split_path[1] if (len(split_path) > 1) else ''
         file_name = split_path[2] if len(split_path) == 3 else ''
 
-        valid_urls = ['', 'credit', 'logout', 'history', 'stock']
+        valid_urls = ['', 'credit', 'logout', 'history', 'stock', 'stock-history']
         if self.isLoggedIn() and self.getCurrentUserObject().admin:
             valid_urls.append('admin')
 
@@ -202,6 +202,25 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='History',
                                                      transaction_history=transaction_history,
                                                      page_data=page_data, error=post_vars['error']))
+
+                elif (base_dir == 'stock-history'):
+                    template = env.get_template('stock_history.html')
+                    stock_payments = self.getCurrentUserObject().getStockPayments()
+
+                    if (len(stock_payments) > TRANSACTION_PAGE_SIZE):
+                        page_number = int(split_path[2]) if len(split_path) == 3 else 1
+                        total_pages = int(math.ceil((len(stock_payments) - 1) / TRANSACTION_PAGE_SIZE)) + 1
+                        page_data = self.getPageData(page_number, total_pages, '/history/%s')
+                        array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
+                        array_end = page_number * TRANSACTION_PAGE_SIZE
+                        stock_payments = stock_payments[array_start:array_end]
+
+                    else:
+                        page_data = []
+
+                    self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock History',
+                                                     payements=stock_payments, page_data=page_data,
+                                                     error=post_vars['error']))
 
                 elif (base_dir == 'stock'):
                     template = env.get_template('stock.html')

@@ -57,13 +57,12 @@ class User(models.Model):
         fully_paid = True
 
       StockPayment(user=self, inventory_transaction=transaction, amount=transaction_amount,
-                   fully_paid=fully_paid, installment=bool(semi_paid_transaction)).save()
+                   fully_paid=fully_paid, installment=bool(transaction.cost - transaction_amount)).save()
       transaction.save()
 
-      if semi_paid_transaction:
+      amount -= transaction_amount
+      if amount == 0:
         break
-      else:
-        amount -= transaction_amount
 
     return amount, semi_paid_transaction
 
@@ -77,7 +76,14 @@ class User(models.Model):
     return getMoneyString(self.getTotalOwed(), include_sign=False)
 
   def getUnpaidTransactions(self):
-    return InventoryTransaction.objects.filter(user=self).annotate(amount_paid=models.Sum('stockpayment__amount')).order_by('-amount_paid', 'timestamp')
+    # Would use the following, however, the Sum annotation cannot be used to filter
+    # InventoryTransaction.objects.filter(user=self).annotate(amount_paid=models.Sum('stockpayment__amount')).order_by('-amount_paid', 'timestamp')
+    inventory_transactions = []
+    for inventory_transaction in InventoryTransaction.objects.filter(user=self):
+      if inventory_transaction.getRemainingCost():
+        inventory_transactions.append(inventory_transaction)
+    inventory_transactions.sort(key=lambda x: (-x.getAmountPaid(), x.timestamp))
+    return inventory_transactions
 
   def getCurrentCredit(self, refresh_cache=False):
     if (refresh_cache or
@@ -155,6 +161,9 @@ class User(models.Model):
       date_to = datetime.datetime.now()
 
     return Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
+
+  def getStockPayments(self):
+    return StockPayment.objects.filter(user=self)
 
 
 class Inventory(models.Model):
@@ -312,6 +321,9 @@ class InventoryTransaction(models.Model):
     """By default, dispaly the object as the time string"""
     return self.toTimeString()
 
+  def getDescriptiveTitle(self):
+    return "%s * %s @ %s" % (self.inventory.name, self.quantity, self.cost)
+
   def getCostString(self):
     """Get the cost as a human-readable string"""
     return getMoneyString(self.cost, include_sign=False)
@@ -375,6 +387,29 @@ class StockPayment(models.Model):
   installment = models.BooleanField(default=False)
   description = models.CharField(max_length=255, null=True)
   timestamp = models.DateTimeField(auto_now_add=True)
+
+  class Meta:
+    ordering = ['-timestamp']
+
+  def toTimeString(self):
+    if (self.timestamp.date() == datetime.datetime.today().date()):
+      return self.timestamp.strftime("%H:%M")
+    else:
+      return self.timestamp.strftime("%d/%m/%y %H:%M")
+
+  def getAmountString(self):
+    return getMoneyString(self.amount, include_sign=False)
+
+  def getNotes(self):
+    if self.fully_paid:
+      notes = 'Fully paid'
+    else:
+      notes = 'Partially paid'
+
+    if self.installment:
+      notes += ' (in installments)'
+
+    return notes
 
 
 class Token(models.Model):
