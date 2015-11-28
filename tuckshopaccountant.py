@@ -364,7 +364,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def processCreditPostRequest(self, variables, post_vars):
         action = variables['action']
         if (action == 'pay' and 'amount' in variables):
-            self.getCurrentUserObject().removeCredit(int(variables['amount']))
+            if 'description' in variables:
+                description = variables['description']
+            else:
+                description = None
+            self.getCurrentUserObject().removeCredit(amount=int(variables['amount']), description=description)
         elif (action == 'pay' and 'item_id' in variables):
             inventory_object = Inventory.objects.get(pk=variables['item_id'])
             self.getCurrentUserObject().removeCredit(inventory=inventory_object)
