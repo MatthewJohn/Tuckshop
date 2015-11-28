@@ -15,7 +15,6 @@ Todo
   * Add CSV export
   * Change method of paying inv. transactions
  * Admin page confirmations
- * Add description to balance adjust
  * Add stock credit
 
 ## Future

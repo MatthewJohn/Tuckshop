@@ -356,11 +356,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 post_vars['warning'] = '%s left after paying for all transactions' % getMoneyString(amount, include_sign=False)
 
         elif action == 'Add':
+            description = None if 'description' not in variables else variables['description']
             user_object = User.objects.get(uid=variables['uid'])
-            user_object.addCredit(int(variables['amount']))
+            user_object.addCredit(int(variables['amount']), description=description)
         elif action == 'Remove':
+            description = None if 'description' not in variables else variables['description']
             user_object = User.objects.get(uid=variables['uid'])
-            user_object.removeCredit(int(variables['amount']))
+            user_object.removeCredit(int(variables['amount']), description=description)
 
         return post_vars
 
