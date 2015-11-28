@@ -182,7 +182,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     inventory_items = Inventory.getAvailableItems()
                     self.wfile.write(template.render(app_name=APP_NAME, inventory=inventory_items,
                                                      page_name='Credit', user=self.getCurrentUserObject(),
-                                                     error=post_vars['error']))
+                                                     error=post_vars['error'],
+                                                     enable_custom=ENABLE_CUSTOM_PAYMENT))
 
                 elif (base_dir == 'history'):
                     template = env.get_template('history.html')
@@ -364,11 +365,14 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def processCreditPostRequest(self, variables, post_vars):
         action = variables['action']
         if (action == 'pay' and 'amount' in variables):
-            if 'description' in variables:
-                description = variables['description']
+            if ENABLE_CUSTOM_PAYMENT:
+                if 'description' in variables:
+                    description = variables['description']
+                else:
+                    description = None
+                self.getCurrentUserObject().removeCredit(amount=int(variables['amount']), description=description)
             else:
-                description = None
-            self.getCurrentUserObject().removeCredit(amount=int(variables['amount']), description=description)
+                post_vars['error'] = 'Custom payment is disabled'
         elif (action == 'pay' and 'item_id' in variables):
             inventory_object = Inventory.objects.get(pk=variables['item_id'])
             self.getCurrentUserObject().removeCredit(inventory=inventory_object)
