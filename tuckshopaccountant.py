@@ -247,6 +247,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Admin',
                                                      users=users, error=post_vars['error'],
                                                      warning=post_vars['warning'],
+                                                     info=post_vars['info'],
                                                      unpaid_users=unpaid_users))
 
         else:
@@ -356,13 +357,23 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 post_vars['warning'] = '%s left after paying for all transactions' % getMoneyString(amount, include_sign=False)
 
         elif action == 'Add':
+            if 'amount' not in variables or not int(variables['amount']):
+                post_vars['error'] = 'Amount must be a positive integer'
+                return post_vars
             description = None if 'description' not in variables else variables['description']
-            user_object = User.objects.get(uid=variables['uid'])
-            user_object.addCredit(int(variables['amount']), description=description)
+            user = User.objects.get(uid=variables['uid'])
+            user.addCredit(int(variables['amount']), description=description)
+            post_vars['info'] = 'Added %s to %s' % (getMoneyString(variables['amount'], include_sign=False),
+                                                    user.uid)
         elif action == 'Remove':
+            if 'amount' not in variables or not int(variables['amount']):
+                post_vars['error'] = 'Amount must be a positive integer'
+                return post_vars
             description = None if 'description' not in variables else variables['description']
-            user_object = User.objects.get(uid=variables['uid'])
-            user_object.removeCredit(int(variables['amount']), description=description)
+            user = User.objects.get(uid=variables['uid'])
+            user.removeCredit(int(variables['amount']), description=description)
+            post_vars['info'] = 'Removed %s from %s' % (getMoneyString(variables['amount'], include_sign=False),
+                                                        user.uid)
 
         return post_vars
 
