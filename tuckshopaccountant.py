@@ -139,6 +139,8 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             post_vars['error'] = None
         if 'warning' not in post_vars:
             post_vars['warning'] = None
+        if 'info' not in post_vars:
+            post_vars['info'] = None
         self.post_vars = post_vars
         split_path = self.path.split('/')
         base_dir = split_path[1] if (len(split_path) > 1) else ''
@@ -231,6 +233,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Stock',
                                                      inventory_items=inventory_items,
                                                      active_items=active_items, error=post_vars['error'],
+                                                     info=post_vars['info'],
                                                      latest_transaction_data=json.dumps(latest_transaction_data)))
 
                 elif base_dir == 'admin' and user_object.admin:
@@ -405,9 +408,14 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if sale_price is None:
                 post_vars['error'] = 'No previous stock for item - sale price must be specified'
             else:
-                InventoryTransaction(inventory=inventory_object, user=self.getCurrentUserObject(),
-                                     quantity=quantity, cost=cost, sale_price=sale_price,
-                                     description=description).save()
+                inv_transaction = InventoryTransaction(inventory=inventory_object, user=self.getCurrentUserObject(),
+                                                       quantity=quantity, cost=cost, sale_price=sale_price,
+                                                       description=description)
+                inv_transaction.save()
+                post_vars['info'] = 'Successfully added %s x %s, Cost: %s, Sale Price: %s' % (
+                    quantity, inventory_object.name, inv_transaction.getCostString(),
+                    inv_transaction.getSalePriceString()
+                )
 
         elif (action == 'update'):
             if 'item_id' not in variables:

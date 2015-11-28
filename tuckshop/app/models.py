@@ -329,6 +329,10 @@ class InventoryTransaction(models.Model):
     """Get the cost as a human-readable string"""
     return getMoneyString(self.cost, include_sign=False)
 
+  def getSalePriceString(self):
+    """Get the cost as a human-readable string"""
+    return getMoneyString(self.sale_price, include_sign=False)
+
   def getAmountPaid(self):
     return StockPayment.objects.filter(inventory_transaction=self).aggregate(models.Sum('amount'))['amount__sum'] or 0
 
