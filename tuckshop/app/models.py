@@ -82,7 +82,7 @@ class User(models.Model):
     for inventory_transaction in InventoryTransaction.objects.filter(user=self):
       if inventory_transaction.getRemainingCost():
         inventory_transactions.append(inventory_transaction)
-    inventory_transactions.sort(key=lambda x: (-x.getAmountPaid(), x.timestamp))
+    inventory_transactions.sort(key=lambda x: (-x.getAmountPaid(), bool(x.getQuantityRemaining()), x.timestamp))
     return inventory_transactions
 
   def getCurrentCredit(self, refresh_cache=False):
