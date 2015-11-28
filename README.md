@@ -16,7 +16,6 @@ Todo
   * Change method of paying inv. transactions
  * Confirmation message about adding stock
  * Admin page confirmations
- * Order payments by 'sold out', 
  * Add description to balance adjust
  * Add stock credit
 
