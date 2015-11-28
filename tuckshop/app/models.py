@@ -102,12 +102,12 @@ class User(models.Model):
       balance = RedisConnection.get(User.current_credit_cache_key % self.id)
     return balance
 
-  def addCredit(self, amount):
+  def addCredit(self, amount, description=None):
     amount = int(amount)
     if (amount < 0):
       raise Exception('Cannot use negative number')
     current_credit = self.getCurrentCredit()
-    transaction = Transaction(user=self, amount=amount, debit=False)
+    transaction = Transaction(user=self, amount=amount, debit=False, description=description)
     transaction.save()
 
     # Update credit cache
