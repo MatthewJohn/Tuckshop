@@ -17,7 +17,6 @@ Todo
  * Confirmation message about adding stock
  * Admin page confirmations
  * Order payments by 'sold out', 
- * Change custom amount pay disabnle option
  * Add description to balance adjust
  * Add stock credit
 

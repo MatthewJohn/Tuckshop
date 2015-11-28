@@ -2,7 +2,7 @@
 {% block content %}
                     <div class="row" id="central">
                         <div class="col-md-8 col-sm-12 col-xs-12">
-                            <h1>Tuck Shop</h1>
+                            <h1>{{ app_name }}</h1>
                             <div id="current-credit">
                                 <p>Welcome to the tuck shop, {{ user.display_name }}. You currently have </p>
                                 <h2 style="text-align:center">{{ user.getCreditString() }}</h2>
@@ -27,6 +27,7 @@
                                 </div>
                             </div>
                             {% endfor %}
+                            {% if enable_custom %}
                             <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
                                 <div class="thumbnail">
                                     <div class="caption">
@@ -43,6 +44,7 @@
                                     </div>
                                 </div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
 {% endblock %}
