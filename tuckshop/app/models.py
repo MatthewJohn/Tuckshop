@@ -116,7 +116,7 @@ class User(models.Model):
                         current_credit)
     return current_credit
 
-  def removeCredit(self, amount=None, inventory=None):
+  def removeCredit(self, amount=None, inventory=None, description=None):
     if (inventory and inventory.getQuantityRemaining() <= 0):
       raise Exception('There are no items in stock')
 
@@ -141,6 +141,7 @@ class User(models.Model):
       raise Exception('Cannot use negative number')
 
     transaction.amount = amount
+    transaction.description = description
     transaction.save()
 
     # Update credit cache
