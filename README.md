@@ -17,6 +17,10 @@ Todo
  * Admin page confirmations
  * Add stock credit
 
+## Bugs:
+ * Fix page links in stock-history
+ * Message after paying for partial stock: Not enough to fully pay transaction: 08:41 (0p paid)
+
 ## Future
 
 * Setup RFID/scanner systems
