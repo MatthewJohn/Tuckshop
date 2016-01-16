@@ -33,26 +33,6 @@ from tuckshop.app.functions import *
 from tuckshop.app.config import *
 from tuckshop.app.redis_connection import RedisConnection
 
-# Setup listener for RFID to obtain login details
-# from asyncore import file_dispatcher, loop
-# from evdev import InputDevice, categorize, ecodes
-# dev = InputDevice('/dev/input/event8')
-
-# class InputDeviceDispatcher(file_dispatcher):
-#     def __init__(self, device):
-#         self.device = device
-#         file_dispatcher.__init__(self, device)
-
-#     def recv(self, ign=None):
-#         return self.device.read()
-
-#     def handle_read(self):
-#         for event in self.recv():
-#             print(repr(event))
-
-#InputDeviceDispatcher(dev)
-#loop()
-
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
 
