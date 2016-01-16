@@ -193,7 +193,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     if (len(stock_payments) > TRANSACTION_PAGE_SIZE):
                         page_number = int(split_path[2]) if len(split_path) == 3 else 1
                         total_pages = int(math.ceil((len(stock_payments) - 1) / TRANSACTION_PAGE_SIZE)) + 1
-                        page_data = self.getPageData(page_number, total_pages, '/history/%s')
+                        page_data = self.getPageData(page_number, total_pages, '/stock-history/%s')
                         array_start = (page_number - 1) * TRANSACTION_PAGE_SIZE
                         array_end = page_number * TRANSACTION_PAGE_SIZE
                         stock_payments = stock_payments[array_start:array_end]
