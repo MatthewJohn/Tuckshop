@@ -1,3 +1,23 @@
 {% extends "layout.html" %}
 {% block content %}
+                <div class="row position-central">
+                    <h2>Float</h2>
+                    <dl class="dl-horizontal">
+                        <dt>Float</dt>
+                        <dd>{{ float }}</dd>
+                        <dt>Stock Value</dt>
+                        <dd>{{ stock_value }}</dd>
+                    </dl>
+                    <table class="table">
+                        <tr><th>Item</th><th>Total Quantity Remaining</th></tr>
+                        {% for inventory_item in active_inventorys %}
+                            <tr><td>{{ inventory_item.name }}</td><td>{{ inventory_item.getQuantityRemaining() }}</td></tr>
+                            <tr><th>User</th><th>Cost</th><th>Sale Value</th><th>Quantity</th></tr>
+                            {% for inventory_transaction in inventory_item.getInventoryTransactions(only_active=True) %}
+                            <tr><td>{{ inventory_transaction.user.uid }}</td><td>{{ inventory_transaction.getCostString() }}</td><td>{{ inventory_transaction.getSalePriceString() }}</td><td>{{ inventory_transaction.getQuantityRemaining() }}</td></tr>
+                            {% endfor %}
+                            <tr></tr>
+                        {% endfor %}
+                    </table>
+                </div>
 {% endblock %}

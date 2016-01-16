@@ -233,10 +233,16 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 elif base_dir == 'float' and user_object.admin:
                     template = env.get_template('float.html')
                     active_inventory_transactions = InventoryTransaction.getActiveTransactions()
-                    current_float = self.getCurrentFloat()
-                    available_stock_value = self.getStockValue()
+                    active_inventorys = []
+                    for inventory_transaction in active_inventory_transactions:
+                        if inventory_transaction.inventory not in active_inventorys:
+                            active_inventorys.append(inventory_transaction.inventory)
+
+                    current_float = getMoneyString(self.getCurrentFloat(), include_sign=True)
+                    available_stock_value = getMoneyString(self.getStockValue(), include_sign=True)
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Float',
                                                      active_transactions=active_inventory_transactions,
+                                                     active_inventorys=active_inventorys,
                                                      float=current_float, stock_value=available_stock_value,
                                                      error=post_vars['error'],
                                                      warning=post_vars['warning'],
