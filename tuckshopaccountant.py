@@ -113,7 +113,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             error = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
         else:
             error = None
-        self.wfile.write(template.render(app_name=APP_NAME, page_name='Login', warning=error, url=self.path))
+        self.wfile.write(template.render(app_name=APP_NAME, page_name='Login', login_warning=error, url=self.path))
 
     def isLoggedIn(self):
         if (self.getSessionVar('username')):
