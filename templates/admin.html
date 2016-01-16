@@ -1,5 +1,12 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <script>
+                        function ConfirmDialog(message, form_id) {
+                            if (confirm(message)) {
+                                document.getElementById(form_id).submit();
+                            }
+                        };
+                    </script>
                     <div class="row" id="central position-central">
                         <div class="col-md-12">
                             <h2>Users</h2>
@@ -51,17 +58,17 @@
                                 </table>
                             </div>
                             <div class="col-lg-5 col-md-6 col-sm-10 sol-xs-12">
-                                <form action="/admin" method="post">
+                                <form action="/admin" method="post" id="pay_{{ user.uid }}">
                                     <input type="hidden" name="action" value="pay_stock" />
                                     <input type="hidden" name="uid" value="{{ user.uid }}" />
                                     <div class="form-group">
                                         <span for="pay_amount_input">Amount to Pay</span>
                                         <div class="input-group">
                                             <div class="input-group-addon">&pound;</div>
-                                            <input type="text" class="form-control" name="amount" id="pay_amount_input" placeholder="10.00" />
+                                            <input type="text" class="form-control" name="amount" id="pay_amount_{{ user.uid }}" placeholder="10.00" />
                                         </div>
                                     </div>
-                                    <input class="btn btn-info" type="submit" value="Pay {{ user.uid }}" />
+                                    <input class="btn btn-info" onclick="ConfirmDialog('Are you sure you wish to pay {{ user.uid }} &pound;' + document.getElementById('pay_amount_{{ user.uid }}').value, 'pay_{{ user.uid }}')" value="Pay {{ user.uid }}" />
                                 </form>
                             </div>
                             {% endfor %}
