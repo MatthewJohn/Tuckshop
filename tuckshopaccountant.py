@@ -234,9 +234,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     template = env.get_template('float.html')
                     active_inventory_transactions = InventoryTransaction.getActiveTransactions()
                     current_float = self.getCurrentFloat()
-                    print current_float
                     available_stock_value = self.getStockValue()
-                    print available_stock_value
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Float',
                                                      active_transactions=active_inventory_transactions,
                                                      float=current_float, stock_value=available_stock_value,
