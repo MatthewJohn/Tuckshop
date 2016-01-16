@@ -128,7 +128,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         valid_urls = ['', 'credit', 'logout', 'history', 'stock', 'stock-history']
         if self.isLoggedIn() and self.getCurrentUserObject().admin:
-            valid_urls.append('admin')
+            valid_urls.extend(['admin', 'float'])
 
         if (base_dir == 'css'):
             self.getFile('text/css', 'css', file_name)
@@ -229,6 +229,13 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                                      warning=post_vars['warning'],
                                                      info=post_vars['info'],
                                                      unpaid_users=unpaid_users))
+
+                elif base_dir == 'float' and user_object.admin:
+                    template = env.get_template('float.html')
+                    self.wfile.write(template.render(app_name=APP_NAME, page_name='Float',
+                                                     error=post_vars['error'],
+                                                     warning=post_vars['warning'],
+                                                     info=post_vars['info']))
 
         else:
             self.send_response(404)
