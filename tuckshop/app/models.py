@@ -323,7 +323,7 @@ class InventoryTransaction(models.Model):
     return self.toTimeString()
 
   def getDescriptiveTitle(self):
-    return "%s * %s @ %s" % (self.inventory.name, self.quantity, self.cost)
+    return "%s x %s @ %s" % (self.inventory.name, self.quantity, self.getCostString())
 
   def getCostString(self):
     """Get the cost as a human-readable string"""
