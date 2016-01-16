@@ -233,6 +233,15 @@ class Inventory(models.Model):
         # transaction
         return self.getCurrentInventoryTransaction(refresh_cache=True)
 
+  def getInventoryTransactions(self, only_active=True):
+    inventory_transactions_qs = InventoryTransaction.objects.filter(inventory=self)
+    inventory_transactions = []
+    for inventory_transaction in inventory_transactions_qs:
+      if inventory_transaction.getQuantityRemaining() or not only_active:
+        inventory_transactions.append(inventory_transaction)
+
+    return inventory_transactions
+
   def getImageUrl(self):
     # Return the image URL, if it exists. Else, return a default image
     return self.image_url if self.image_url else 'http://www.monibazar.com/images/noimage.png'
