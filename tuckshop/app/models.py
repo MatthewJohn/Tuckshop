@@ -227,7 +227,7 @@ class Inventory(models.Model):
 
   def getImageUrl(self):
     # Return the image URL, if it exists. Else, return a default image
-    return self.image_url if self.image_url else 'http://www.onlineseowebservice.com/news/wp-content/themes/creativemag/images/default.png'
+    return self.image_url if self.image_url else 'http://www.monibazar.com/images/noimage.png'
 
   @staticmethod
   def getAvailableItems():
