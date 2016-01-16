@@ -175,6 +175,14 @@ class Inventory(models.Model):
 
   inventory_transaction_cache_key = 'Inventory_%s_inventory_transaction'
 
+  def getStockValue(self):
+    """Returns the total sale value for the available stock"""
+    total_value = 0
+    for inv_transaction in InventoryTransaction.objects.filter(inventory=self):
+      total_value += (inv_transaction.getQuantityRemaining() * inv_transaction.sale_price)
+
+    return total_value
+
   def getSalePrice(self):
     if self.getCurrentInventoryTransaction():
       return self.getCurrentInventoryTransaction().sale_price
@@ -298,6 +306,16 @@ class InventoryTransaction(models.Model):
   sale_price = models.IntegerField()
   timestamp = models.DateTimeField(auto_now_add=True)
   description = models.CharField(max_length=255, null=True)
+
+  @staticmethod
+  def getActiveTransactions():
+    """Returns transactions that have remaining stock"""
+    # TODO Add ability to filter un-started transactions
+    transactions = InventoryTransaction.objects.all()
+    for transaction in transactions:
+      if not transaction.getQuantityRemaining():
+        transactions.remove(transaction)
+    return transactions
 
   def getQuantityRemaining(self):
     """Returns the quantity available to purchase from the

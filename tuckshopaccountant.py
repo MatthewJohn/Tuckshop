@@ -232,7 +232,14 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
                 elif base_dir == 'float' and user_object.admin:
                     template = env.get_template('float.html')
+                    active_inventory_transactions = InventoryTransaction.getActiveTransactions()
+                    current_float = self.getCurrentFloat()
+                    print current_float
+                    available_stock_value = self.getStockValue()
+                    print available_stock_value
                     self.wfile.write(template.render(app_name=APP_NAME, page_name='Float',
+                                                     active_transactions=active_inventory_transactions,
+                                                     float=current_float, stock_value=available_stock_value,
                                                      error=post_vars['error'],
                                                      warning=post_vars['warning'],
                                                      info=post_vars['info']))
@@ -246,6 +253,33 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                                              path=self.path, error=post_vars['error']))
 
         return
+
+    def getCurrentFloat(self):
+        """Gets the current float - amount of money
+           in the tuckshop"""
+        float_amount = 0
+        # Get the total amount payed for stock
+        for stock_payment in StockPayment.objects.all():
+            float_amount -= stock_payment.amount
+
+        # Get the total value of payements for items (transactions with linked inventory items)
+        for transaction in Transaction.objects.filter(inventory_transaction__isnull=False):
+            float_amount += transaction.amount
+
+        # Adjust float based on user's current credit
+        for user in User.objects.all():
+            float_amount += user.getCurrentCredit()
+
+        return float_amount
+
+
+    def getStockValue(self):
+        """Returns the current sale value of all stock"""
+        stock_value = 0
+        for item in Inventory.objects.all():
+            stock_value += item.getStockValue()
+        return stock_value
+
 
     def getLatestTransactionData(self):
         latest_data = {}
