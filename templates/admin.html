@@ -1,5 +1,69 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <link rel="stylesheet" href="/css/bootstrap-dialog.css" />
+                    <script src="/js/bootstrap-dialog.js"></script>
+                    <script>
+                        function confirmPayUser(uid, amount)
+                        {
+                            BootstrapDialog.show({
+                                message: 'Are you sure you wish to pay ' + uid + ' \u00A3' + amount + ' for stock',
+                                buttons: [{
+                                    label: 'Pay',
+                                    action: function(dialogRef) {
+                                        document.getElementById('pay_' + uid).submit();
+                                        dialogRef.close()
+                                    },
+                                    cssClass: 'btn-warning'
+                                },
+                                {
+                                    label: 'Cancel',
+                                    action: function(dialogRef) {
+                                        dialogRef.close();
+                                    }
+                                }]
+                            });
+                        }
+                        function handlePayEnter(event, uid, amount)
+                        {
+                            if (event.keyCode == 13)
+                            {
+                                confirmPayUser(uid, amount);
+                                return false;
+                            }
+                            return event.keyCode != 13;
+                        }
+
+                        function confirmCreditChange(uid, amount, description, credit)
+                        {
+                            if (credit)
+                            {
+                                message = 'Are you sure that you wish to add ' + amount + 'p to the account of ' + uid;
+                                document.getElementById('action_' + uid).value = 'credit';
+                            }
+                            else
+                            {
+                                message = 'Are you sure that you wish to remove ' + amount + 'p from the account of ' + uid;
+                                document.getElementById('action_' + uid).value = 'debit';
+                            }
+                            BootstrapDialog.show({
+                                message: message,
+                                buttons: [{
+                                    label: 'Accept',
+                                    action: function(dialogRef) {
+                                        document.getElementById('credit_change_' + uid).submit();
+                                        dialogRef.close()
+                                    },
+                                    cssClass: 'btn-warning'
+                                },
+                                {
+                                    label: 'Cancel',
+                                    action: function(dialogRef) {
+                                        dialogRef.close();
+                                    }
+                                }]
+                            });
+                        }
+                    </script>
                     <div class="row" id="central position-central">
                         <div class="col-md-12">
                             <h2>Users</h2>
@@ -7,25 +71,28 @@
                                 <tr><th>Username</th><th>Admin Status</th><th>Balance</th><th>Adjust Blanace</th></tr>
                                 {% for user in users %}
                                 <tr>
-                                    <form action="/admin" method="post">
+                                    <form action="/admin" method="post" id="credit_change_{{ user.uid }}" onkeypress="return event.keyCode != 13;">
                                         <input type="hidden" name="uid" value="{{ user.uid }}" />
                                         <td>{{ user.uid }}</td>
                                         <td><span class="glyphicon glyphicon-{% if user.admin %}ok{% else %}ban{% endif %}-circle"></span>
                                         <td>{{ user.getCreditString() }}</td>
                                         <td>
                                             <div class="input-group">
-                                                <input type="text" class="form-control" name="amount" placeholder="60" size="6"/>
+                                                <input type="text" class="form-control input-sm" id="credit_change_amount_{{ user.uid }}" name="amount" placeholder="60" size="4"/>
                                                 <div class="input-group-addon">p</div>
                                             </div>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control" name="description" placeholder="Description" size="12" />
+                                            <input type="text" class="form-control input-sm" id="credit_change_description_{{ user.uid }}" name="description" placeholder="Description" size="12" />
                                         </td>
                                         <td>
-                                            <input class="btn btn-warning" type="submit" name="action" value="Add" />
-                                            <input class="btn btn-info" type="submit" name="action" value="Remove" />
+                                            <input type="hidden" id="action_{{ user.uid }}" name="action" value="" />
                                         </td>
                                     </form>
+                                        <td>
+                                            <button class="btn btn-warning btn-xs" onclick="confirmCreditChange('{{ user.uid }}', document.getElementById('credit_change_amount_{{ user.uid }}').value, document.getElementById('credit_change_description_{{ user.uid }}').value, true)">Credit</button>
+                                            <button class="btn btn-info btn-xs" onclick="confirmCreditChange('{{ user.uid }}', document.getElementById('credit_change_amount_{{ user.uid }}').value, document.getElementById('credit_change_description_{{ user.uid }}').value, false)">Debit</button>
+                                        </td>
                                 </tr>
                                 {% endfor %}
                             </table>
@@ -51,18 +118,18 @@
                                 </table>
                             </div>
                             <div class="col-lg-5 col-md-6 col-sm-10 sol-xs-12">
-                                <form action="/admin" method="post">
+                                <form action="/admin" method="post" id="pay_{{ user.uid }}" onkeypress="return handlePayEnter(event, '{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">
                                     <input type="hidden" name="action" value="pay_stock" />
                                     <input type="hidden" name="uid" value="{{ user.uid }}" />
                                     <div class="form-group">
                                         <span for="pay_amount_input">Amount to Pay</span>
                                         <div class="input-group">
                                             <div class="input-group-addon">&pound;</div>
-                                            <input type="text" class="form-control" name="amount" id="pay_amount_input" placeholder="10.00" />
+                                            <input type="text" class="form-control" name="amount" id="pay_amount_{{ user.uid }}" placeholder="10.00" />
                                         </div>
                                     </div>
-                                    <input class="btn btn-info" type="submit" value="Pay {{ user.uid }}" />
                                 </form>
+                                <button class="btn btn-info" onclick="confirmPayUser('{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">Pay {{ user.uid }}</button>
                             </div>
                             {% endfor %}
                         </div>
