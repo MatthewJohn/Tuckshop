@@ -143,7 +143,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(200)
             self.getSession(clear_cookie=True)
             self.end_headers()
-            self.sendLogin()
+            self.wfile.write('<meta http-equiv="refresh" content="0; url=/" />')
 
         elif (base_dir in valid_urls):
             self.getSession()
