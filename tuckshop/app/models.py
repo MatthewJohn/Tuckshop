@@ -175,6 +175,14 @@ class Inventory(models.Model):
 
   inventory_transaction_cache_key = 'Inventory_%s_inventory_transaction'
 
+  def getStockValue(self):
+    """Returns the total sale value for the available stock"""
+    total_value = 0
+    for inv_transaction in InventoryTransaction.objects.filter(inventory=self):
+      total_value += (inv_transaction.getQuantityRemaining() * inv_transaction.sale_price)
+
+    return total_value
+
   def getSalePrice(self):
     if self.getCurrentInventoryTransaction():
       return self.getCurrentInventoryTransaction().sale_price
@@ -224,6 +232,15 @@ class Inventory(models.Model):
         # Otherwise, clear the cache and use this function to search for a new
         # transaction
         return self.getCurrentInventoryTransaction(refresh_cache=True)
+
+  def getInventoryTransactions(self, only_active=True):
+    inventory_transactions_qs = InventoryTransaction.objects.filter(inventory=self)
+    inventory_transactions = []
+    for inventory_transaction in inventory_transactions_qs:
+      if inventory_transaction.getQuantityRemaining() or not only_active:
+        inventory_transactions.append(inventory_transaction)
+
+    return inventory_transactions
 
   def getImageUrl(self):
     # Return the image URL, if it exists. Else, return a default image
@@ -298,6 +315,17 @@ class InventoryTransaction(models.Model):
   sale_price = models.IntegerField()
   timestamp = models.DateTimeField(auto_now_add=True)
   description = models.CharField(max_length=255, null=True)
+
+  @staticmethod
+  def getActiveTransactions():
+    """Returns transactions that have remaining stock"""
+    # TODO Add ability to filter un-started transactions
+    all_transactions = InventoryTransaction.objects.all()
+    transactions = []
+    for transaction in all_transactions:
+      if transaction.getQuantityRemaining():
+        transactions.append(transaction)
+    return transactions
 
   def getQuantityRemaining(self):
     """Returns the quantity available to purchase from the
