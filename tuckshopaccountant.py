@@ -381,7 +381,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             elif amount:
                 post_vars['warning'] = '%s left after paying for all transactions' % getMoneyString(amount, include_sign=False)
 
-        elif action == 'Add':
+        elif action == 'credit':
             if 'amount' not in variables or not int(variables['amount']):
                 post_vars['error'] = 'Amount must be a positive integer'
                 return post_vars
@@ -390,7 +390,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             user.addCredit(int(variables['amount']), description=description)
             post_vars['info'] = 'Added %s to %s' % (getMoneyString(variables['amount'], include_sign=False),
                                                     user.uid)
-        elif action == 'Remove':
+        elif action == 'debit':
             if 'amount' not in variables or not int(variables['amount']):
                 post_vars['error'] = 'Amount must be a positive integer'
                 return post_vars
