@@ -320,10 +320,11 @@ class InventoryTransaction(models.Model):
   def getActiveTransactions():
     """Returns transactions that have remaining stock"""
     # TODO Add ability to filter un-started transactions
-    transactions = InventoryTransaction.objects.all()
-    for transaction in transactions:
-      if not transaction.getQuantityRemaining():
-        transactions.remove(transaction)
+    all_transactions = InventoryTransaction.objects.all()
+    transactions = []
+    for transaction in all_transactions:
+      if transaction.getQuantityRemaining():
+        transactions.append(transaction)
     return transactions
 
   def getQuantityRemaining(self):

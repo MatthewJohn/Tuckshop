@@ -1,5 +1,29 @@
 {% extends "layout.html" %}
 {% block content %}
+                <link rel="stylesheet" href="/css/bootstrap-dialog.css" />
+                <script src="/js/bootstrap-dialog.js"></script>
+                <script>
+                    function adjustDialog(current_quantity, transaction_id)
+                    {
+                        BootstrapDialog.show({
+                            message: 'Current Quantity: ' + current_quantity + '<br />Adjustment: <input type="text" class="form-control" />',
+                            buttons: [{
+                                label: 'Decrease',
+                                action: function(dialogRef) {
+                                    var fruit = dialogRef.getModalBody().find('input').val();
+                                    dialogRef.close()
+                                },
+                                cssClass: 'btn-warning'
+                            },
+                            {
+                                label: 'Cancel',
+                                action: function(dialogRef) {
+                                    dialogRef.close();
+                                }
+                            }]
+                        });
+                    }
+                </script>
                 <div class="row position-central">
                     <h2>Float</h2>
                     <dl class="dl-horizontal">
@@ -9,14 +33,20 @@
                         <dd>{{ stock_value }}</dd>
                     </dl>
                     <table class="table">
-                        <tr><th>Item</th><th>Total Quantity Remaining</th></tr>
                         {% for inventory_item in active_inventorys %}
-                            <tr><td>{{ inventory_item.name }}</td><td>{{ inventory_item.getQuantityRemaining() }}</td></tr>
-                            <tr><th>User</th><th>Cost</th><th>Sale Value</th><th>Quantity</th></tr>
-                            {% for inventory_transaction in inventory_item.getInventoryTransactions(only_active=True) %}
-                            <tr><td>{{ inventory_transaction.user.uid }}</td><td>{{ inventory_transaction.getCostString() }}</td><td>{{ inventory_transaction.getSalePriceString() }}</td><td>{{ inventory_transaction.getQuantityRemaining() }}</td></tr>
-                            {% endfor %}
-                            <tr></tr>
+                        <tr><th>Item</th><th>Total Quantity Remaining</th></tr>
+                        <tr><td>{{ inventory_item.name }}</td><td>{{ inventory_item.getQuantityRemaining() }}</td></tr>
+                        <tr><th>User</th><th>Cost</th><th>Sale Value</th><th>Quantity</th><th>Adjust Quantity</th></tr>
+                        {% for inventory_transaction in inventory_item.getInventoryTransactions(only_active=True) %}
+                        <tr>
+                            <td>{{ inventory_transaction.user.uid }}</td>
+                            <td>{{ inventory_transaction.getCostString() }}</td>
+                            <td>{{ inventory_transaction.getSalePriceString() }}</td>
+                            <td>{{ inventory_transaction.getQuantityRemaining() }}/{{ inventory_transaction.quantity }}</td>
+                            <td><button type="button" onclick="adjustDialog({{ inventory_transaction.getQuantityRemaining() }}, {{ inventory_transaction.id }})" class="btn btn-warning btn-xs">Adjust</button></td>
+                        </tr>
+                        {% endfor %}
+                        <tr><td><br /></td></tr>
                         {% endfor %}
                     </table>
                 </div>
