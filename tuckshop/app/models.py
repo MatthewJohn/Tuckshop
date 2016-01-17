@@ -42,9 +42,10 @@ class User(models.Model):
 
   def payForStock(self, amount, pay_to_credit=False):
     if amount < 0:
-      raise Exception('Amount must be a positive')
+      raise Exception('Amount must be a positive amount')
 
     semi_paid_transaction = None
+    initial_amount = amount
     for transaction in self.getUnpaidTransactions():
       partial_payment = bool(transaction.getAmountPaid())
       transaction_amount = 0
@@ -63,6 +64,9 @@ class User(models.Model):
       amount -= transaction_amount
       if amount == 0:
         break
+
+    if semi_paid_transaction:
+      amount = initial_amount
 
     return amount, semi_paid_transaction
 
