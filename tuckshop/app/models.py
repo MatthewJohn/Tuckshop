@@ -1,8 +1,8 @@
 from django.db import models
 
-from config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
-from tuckshop.app.redis_connection import RedisConnection
-from functions import getMoneyString
+from tuckshop.core.config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
+from tuckshop.core.redis_connection import RedisConnection
+from tuckshop.core.utils import getMoneyString
 import ldap
 from decimal import Decimal
 import datetime

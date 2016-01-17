@@ -29,9 +29,9 @@ import django
 django.setup()
 
 from tuckshop.app.models import *
-from tuckshop.app.functions import *
-from tuckshop.app.config import *
-from tuckshop.app.redis_connection import RedisConnection
+from tuckshop.core.utils import *
+from tuckshop.core.config import *
+from tuckshop.core.redis_connection import RedisConnection
 
 env = Environment()
 env.loader = FileSystemLoader('./templates/')
