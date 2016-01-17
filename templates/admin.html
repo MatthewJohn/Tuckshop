@@ -23,6 +23,15 @@
                                 }]
                             });
                         }
+                        function handlePayEnter(event, uid, amount)
+                        {
+                            if (event.keyCode == 13)
+                            {
+                                confirmPayUser(uid, amount);
+                                return false;
+                            }
+                            return event.keyCode != 13;
+                        }
                     </script>
                     <div class="row" id="central position-central">
                         <div class="col-md-12">
@@ -31,7 +40,7 @@
                                 <tr><th>Username</th><th>Admin Status</th><th>Balance</th><th>Adjust Blanace</th></tr>
                                 {% for user in users %}
                                 <tr>
-                                    <form action="/admin" method="post">
+                                    <form action="/admin" method="post" onkeypress="return event.keyCode != 13;">
                                         <input type="hidden" name="uid" value="{{ user.uid }}" />
                                         <td>{{ user.uid }}</td>
                                         <td><span class="glyphicon glyphicon-{% if user.admin %}ok{% else %}ban{% endif %}-circle"></span>
@@ -75,7 +84,7 @@
                                 </table>
                             </div>
                             <div class="col-lg-5 col-md-6 col-sm-10 sol-xs-12">
-                                <form action="/admin" method="post" id="pay_{{ user.uid }}">
+                                <form action="/admin" method="post" id="pay_{{ user.uid }}" onkeypress="return handlePayEnter(event, '{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">
                                     <input type="hidden" name="action" value="pay_stock" />
                                     <input type="hidden" name="uid" value="{{ user.uid }}" />
                                     <div class="form-group">
@@ -85,8 +94,8 @@
                                             <input type="text" class="form-control" name="amount" id="pay_amount_{{ user.uid }}" placeholder="10.00" />
                                         </div>
                                     </div>
+                                    <button class="btn btn-info" onclick="confirmPayUser('{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">Pay {{ user.uid }}</button>
                                 </form>
-                                <button class="btn btn-info" onclick="confirmPayUser('{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">Pay {{ user.uid }}</button>
                             </div>
                             {% endfor %}
                         </div>
