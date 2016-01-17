@@ -19,7 +19,7 @@
                         {
                             latest_transactions[item_id].forEach(function(element, index, array){
                                 var option = document.createElement("option");
-                                option.text = "Quantity: " + element[1] + ", Cost (each): " + element[2] + ", Sale Price: " + element[3] + "p, " + element[4];
+                                option.text = "Quantity: " + element[1] + ", Cost (total): \u00A3" + element[2] + ", Sale Price: " + element[3] + "p, " + element[4];
                                 option.value = JSON.stringify(element);
                                 select.add(option);
                             });
