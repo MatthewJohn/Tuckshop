@@ -1,11 +1,28 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <link rel="stylesheet" href="/css/bootstrap-dialog.css" />
+                    <script src="/js/bootstrap-dialog.js"></script>
                     <script>
-                        function ConfirmDialog(message, form_id) {
-                            if (confirm(message)) {
-                                document.getElementById(form_id).submit();
-                            }
-                        };
+                        function confirmPayUser(uid, amount)
+                        {
+                            BootstrapDialog.show({
+                                message: 'Are you sure you wish to pay ' + uid + ' \u00A3' + amount + ' for stock',
+                                buttons: [{
+                                    label: 'Pay',
+                                    action: function(dialogRef) {
+                                        document.getElementById('pay_' + uid).submit();
+                                        dialogRef.close()
+                                    },
+                                    cssClass: 'btn-warning'
+                                },
+                                {
+                                    label: 'Cancel',
+                                    action: function(dialogRef) {
+                                        dialogRef.close();
+                                    }
+                                }]
+                            });
+                        }
                     </script>
                     <div class="row" id="central position-central">
                         <div class="col-md-12">
@@ -68,8 +85,8 @@
                                             <input type="text" class="form-control" name="amount" id="pay_amount_{{ user.uid }}" placeholder="10.00" />
                                         </div>
                                     </div>
-                                    <input class="btn btn-info" onclick="ConfirmDialog('Are you sure you wish to pay {{ user.uid }} &pound;' + document.getElementById('pay_amount_{{ user.uid }}').value, 'pay_{{ user.uid }}')" value="Pay {{ user.uid }}" />
                                 </form>
+                                <button class="btn btn-info" onclick="confirmPayUser('{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">Pay {{ user.uid }}</button>
                             </div>
                             {% endfor %}
                         </div>
