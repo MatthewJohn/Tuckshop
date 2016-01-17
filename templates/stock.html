@@ -8,7 +8,7 @@
                         var select = document.getElementById("common_dropdown");
                         var length = select.options.length;
                         for (i = 0; i < length; i++) {
-                            select.options[i] = null;
+                            select.options.remove(i);
                         }
 
                         var option = document.createElement("option");
