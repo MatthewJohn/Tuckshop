@@ -47,17 +47,12 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
 
-        if (not sid):
+        if (not sid or clear_cookie):
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             cookie['sid']['expires'] = 24 * 60 * 60
             if (send_header):
                 self.send_header('Set-Cookie', cookie.output())
-
-        if (clear_cookie):
-            RedisConnection.delete('session_' + self.getSession())
-            cookie['sid'] = None
-            self.send_header('Set-Cookie', cookie.output())
 
         return sid
 
@@ -141,7 +136,7 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         elif (base_dir == 'logout'):
             self.send_response(200)
-            self.getSession(clear_cookie=True)
+            self.getSession(clear_cookie=True, send_header=True)
             self.end_headers()
             self.wfile.write('<meta http-equiv="refresh" content="0; url=/" />')
 
