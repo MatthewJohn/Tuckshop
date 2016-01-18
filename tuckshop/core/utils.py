@@ -1,5 +1,9 @@
-from config import LDAP_SERVER
 from os import environ
+import ldap
+
+from tuckshop.core.config import LDAP_SERVER
+from tuckshop.app.models import User
+
 
 def getMoneyString(credit, include_sign=True):
   text_color = 'green' if credit >= 0 else 'red'
@@ -22,8 +26,6 @@ def getMoneyString(credit, include_sign=True):
 
 
 def login(username, password):
-  import ldap
-  from models import User
   if 'TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']:
     # If tuckshop in development mode, match all passwords
     # again 'password'
