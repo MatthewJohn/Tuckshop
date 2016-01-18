@@ -8,8 +8,8 @@ import django
 django.setup()
 
 from tuckshop.app.models import *
-from tuckshop.app.functions import *
-from tuckshop.app.config import *
+from tuckshop.core.utils import *
+from tuckshop.core.config import *
 
 if not User.objects.filter(uid='mc'):
     user = User(uid='mc')
