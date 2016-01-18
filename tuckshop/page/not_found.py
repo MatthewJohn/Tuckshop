@@ -10,6 +10,7 @@ class NotFound(PageBase):
     def __init__(self, *args, **kwargs):
         super(NotFound, self).__init__(*args, **kwargs)
         self.response_code = 404
+        self.return_vars['path'] = self.request_handler.path
 
     def processPage(self):
         pass

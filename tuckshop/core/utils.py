@@ -1,4 +1,4 @@
-from config import LDAP_SERVER
+from tuckshop.core.config import LDAP_SERVER
 from os import environ
 
 def getMoneyString(credit, include_sign=True):
@@ -23,7 +23,7 @@ def getMoneyString(credit, include_sign=True):
 
 def login(username, password):
   import ldap
-  from models import User
+  from tuckshop.app.models import User
   if 'TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']:
     # If tuckshop in development mode, match all passwords
     # again 'password'

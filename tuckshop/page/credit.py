@@ -8,7 +8,7 @@ class Credit(PageBase):
     ADMIN_PAGE = False
 
     def processPage(self):
-        pass
+        self.return_vars['user'] = self.getCurrentUserObject()
 
     def processPost(self):
         pass
