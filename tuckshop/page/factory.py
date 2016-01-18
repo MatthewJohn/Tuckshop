@@ -1,6 +1,7 @@
 from tuckshop.page.page_base import PageBase
 from tuckshop.page.not_found import NotFound
 from tuckshop.page.login import Login
+from tuckshop.page.logout import Logout
 from tuckshop.page.credit import Credit
 from tuckshop.page.redirect import Redirect
 from tuckshop.page.static_file import JS, CSS, Font
@@ -15,6 +16,8 @@ class Factory(object):
             page_object = Credit(request_handler)
         elif name == 'login':
             page_object = Login(request_handler)
+        elif name == 'logout':
+            page_object = Logout(request_handler)
         elif name == 'js':
             page_object = JS(request_handler)
         elif name == 'css':
