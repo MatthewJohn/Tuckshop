@@ -7,12 +7,12 @@ from decimal import Decimal, getcontext
 import ldap
 
 import BaseHTTPServer
-import jinja2
+
 
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
 
-import Cookie
+
 import datetime
 import random
 import sha
@@ -29,6 +29,7 @@ django.setup()
 from tuckshop.app.models import *
 from tuckshop.core.utils import *
 from tuckshop.core.config import *
+from tuckshop.page.factory import Factory as PageFactory
 from tuckshop.core.redis_connection import RedisConnection
 
 env = Environment()
@@ -36,8 +37,6 @@ env.loader = FileSystemLoader('./templates/')
 
 
 class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-
-
 
     def sendLogin(self):
         template = env.get_template('login.html')
@@ -66,6 +65,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return None
 
     def do_GET(self, post_vars={}):
+        page_object = PageFactory.getPageObject(self)
+        page_object.processRequest(post_request=False)
+        return
         # Get file
         if 'error' not in post_vars:
             post_vars['error'] = None
@@ -255,6 +257,9 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return latest_data
 
     def do_POST(self):
+        page_object = PageFactory.getPageObject(self)
+        page_object.processRequest(post_request=True)
+        return
         post_vars = {}
         # Get file
         split_path = self.path.split('/')

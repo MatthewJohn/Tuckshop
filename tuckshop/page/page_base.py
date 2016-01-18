@@ -1,42 +1,165 @@
 import cgi
+import Cookie
+import jinja2
+from jinja2 import FileSystemLoader
+from jinja2.environment import Environment
+import sha
+import math
+from mimetypes import read_mime_types
+import time
 
-from tuckshop.core.config import TOTAL_PAGE_DISPLAY
+
+from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
+from tuckshop.core.tuckshop_exception import TuckshopException
+from tuckshop.core.redis_connection import RedisConnection
+from tuckshop.app.models import User
+
+class PageDoesNotExist(TuckshopException):
+    pass
+
+
+class AuthenticationRequired(TuckshopException):
+    pass
+
+
+class AdminPermissionRequired(TuckshopException):
+    pass
+
 
 class PageBase(object):
 
+    ADMIN_PAGE = False
+    CONTENT_TYPE = 'text/html'
+    REQUIRES_AUTHENTICATION = True
+    ADMIN_PAGE = True
+
+    @staticmethod
+    def getUrlBase(request_handler):
+        url_parts = PageBase.getUrlParts(request_handler)
+        return url_parts[0] if len(url_parts) else ''
+
+    @staticmethod
+    def getUrlParts(request_handler):
+        return request_handler.path.split('/')
+
     def __init__(self, request_handler):
         self.request_handler = request_handler
-        self.post_vars = {
+        self.post_vars = {}
+        self.return_vars = {
             'error': None,
             'warning': None,
-            'info': None
+            'info': None,
+            'app_name': APP_NAME,
+            'page_name': self.name,
+            'page_object': self
         }
+        self.headers = {}
+        self.response_code = 200
+        self.session_id = None
+        self.session_id = self.getSessionId()
 
     @property
     def name(self):
-        if self.NAME:
-            return self.NAME
-        else:
-          raise NotImplementedError
+        return self.NAME
 
     @property
     def template(self):
-        if self.TEMPLATE:
-            return self.TEMPLATE
+        return self.TEMPLATE
+
+    @property
+    def isAdminPage(self):
+        return self.ADMIN_PAGE
+
+    @property
+    def requiresAuthentication(self):
+        return self.REQUIRES_AUTHENTICATION
+
+    @property
+    def contentType(self):
+        return self.CONTENT_TYPE
+
+    def isLoggedIn(self):
+        if (self.getSessionVar('username')):
+            return True
         else:
-            raise NotImplementedError
+            return False
+
+    def getCurrentUsername(self):
+        if (self.isLoggedIn()):
+            return self.getSessionVar('username')
+        else:
+            return None
+
+    def getCurrentUserObject(self):
+        if (self.isLoggedIn()):
+            return User.objects.get(uid=self.getCurrentUsername())
+        else:
+            return None
+
+    def requiresLogin(self):
+        """Determines if the page requires authentication
+           and whether the user is logged in"""
+        if self.requiresAuthentication and not self.isLoggedIn():
+            return True
+        else:
+            return False
+    
+    def requiresAdminAccess(self):
+        """Determines if the page requies admin permissions and
+           whether the user has admin permissions"""
+        if self.isAdminPage and not self.getCurrentUserObject().admin:
+            return True
+        else:
+            return False
 
     def checkAuthentication(self):
+        if self.requiresLogin() or self.requiresAdminAccess():
+            raise Exception('Attempting to process page without required permissions')
+
+    def processTemplate(self):
+        # Send response code
+        self.request_handler.send_response(self.response_code)
+
+        # Send Content-type header
+        self.request_handler.send_header('Content-type', self.contentType)
+
+        # Send headers defined by page
+        for key in self.headers:
+            self.request_handler.send_header(key, self.headers[key])
+
+        self.request_handler.end_headers()
+
+        # Obtain template object
+        env = Environment()
+        env.loader = FileSystemLoader('./templates/')
+        template = env.get_template('%s.html' % self.template)
+        self.request_handler.wfile.write(template.render(**self.return_vars))
+
+    def processRequest(self, post_request):
+        """Handles requests by the web server"""
+        # Ensure that authentication has been checked before
+        # performing any further checks
+        self.checkAuthentication()
+
+        # If it was post request, process the POST variables and
+        # process POST request
+        if post_request:
+            self.getPostVariables()
+            self.processPost()
+
+        # Process page to determine page content
+        self.processPage()
+
+        # Process template
+        self.processTemplate()
+
+    def processPage(self):
         raise NotImplementedError
 
-    def doGet(self):
-        self.processPage()
+    def processPost(self):
+        raise NotImplementedError
 
-    def doPost(self):
-        self.processPost()
-        self.processPage()
-
-    def getPageData(self, current_page, total_pages, url_template):
+    def getPaginationData(self, current_page, total_pages, url_template):
         if (total_pages <= TOTAL_PAGE_DISPLAY):
             page_range = range(1, total_pages + 1)
         else:
@@ -50,36 +173,34 @@ class PageBase(object):
         return page_data
 
     def getPostVariables(self):
-        form = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={'REQUEST_METHOD':'POST',
-                     'CONTENT_TYPE':self.headers['Content-Type']})
+        form = cgi.FieldStorage(fp=self.request_handler.rfile,
+                                headers=self.request_handler.headers,
+                                environ={'REQUEST_METHOD':'POST',
+                                         'CONTENT_TYPE':self.request_handler.headers['Content-Type']})
 
-        variables = {}
         for field in form.keys():
-            variables[field] = form[field].value
-        return variables
+            self.post_vars[field] = form[field].value
 
-    def getSession(self, send_header=False, clear_cookie=False):
+    def getSessionId(self):
+        if not self.session_id:
+            self.session_id = self.getSession()
+
+        return self.session_id
+
+    def getSession(self, clear_cookie=False):
         cookie = Cookie.SimpleCookie()
         sid = None
-        if ('Cookie' in self.headers):
-            cookie.load(self.headers.getheader('Cookie'))
+        if ('Cookie' in self.request_handler.headers):
+            cookie.load(self.request_handler.headers.getheader('Cookie'))
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
 
-        if (not sid):
+        if not sid or clear_cookie:
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             cookie['sid']['expires'] = 24 * 60 * 60
             if (send_header):
-                self.send_header('Set-Cookie', cookie.output())
-
-        if (clear_cookie):
-            RedisConnection.delete('session_' + self.getSession())
-            cookie['sid'] = None
-            self.send_header('Set-Cookie', cookie.output())
+                self.headers['Set-Cookie'] = cookie.output()
 
         return sid
 
@@ -93,18 +214,8 @@ class PageBase(object):
         file_name = '%s/%s' % (base_dir, file_name)
 
         if (file_name and os.path.isfile(file_name)):
-            if content_type is None:
-                content_type = read_mime_types(file_name)
-            self.send_response(200)
-            self.send_header('Content-type', content_type)
-            self.end_headers()
-            self.wfile.write(self.includeFile(file_name))
-        else:
-            self.send_response(401)
-
-    def includeFile(self, file_name):
-        if (file_name and os.path.isfile(file_name)):
+            content_type = read_mime_types(file_name)
             with open(file_name) as fh:
-                return fh.read()
+                return content_type, fh.read()
         else:
-            return None
+            return None, None
