@@ -7,6 +7,7 @@ import sha
 import math
 from mimetypes import read_mime_types
 import time
+import os
 
 
 from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
@@ -28,7 +29,6 @@ class AdminPermissionRequired(TuckshopException):
 
 class PageBase(object):
 
-    ADMIN_PAGE = False
     CONTENT_TYPE = 'text/html'
     REQUIRES_AUTHENTICATION = True
     ADMIN_PAGE = True
@@ -36,7 +36,7 @@ class PageBase(object):
     @staticmethod
     def getUrlBase(request_handler):
         url_parts = PageBase.getUrlParts(request_handler)
-        return url_parts[0] if len(url_parts) else ''
+        return url_parts[1] if len(url_parts) else ''
 
     @staticmethod
     def getUrlParts(request_handler):
@@ -116,7 +116,7 @@ class PageBase(object):
         if self.requiresLogin() or self.requiresAdminAccess():
             raise Exception('Attempting to process page without required permissions')
 
-    def processTemplate(self):
+    def processHeaders(self):
         # Send response code
         self.request_handler.send_response(self.response_code)
 
@@ -129,6 +129,7 @@ class PageBase(object):
 
         self.request_handler.end_headers()
 
+    def processTemplate(self):
         # Obtain template object
         env = Environment()
         env.loader = FileSystemLoader('./templates/')
@@ -151,6 +152,7 @@ class PageBase(object):
         self.processPage()
 
         # Process template
+        self.processHeaders()
         self.processTemplate()
 
     def processPage(self):
@@ -195,12 +197,12 @@ class PageBase(object):
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
 
-        if not sid or clear_cookie:
+        if not sid or clear_cookie or not RedisConnection.hget('session_' + sid, 'session_id'):
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             cookie['sid']['expires'] = 24 * 60 * 60
-            if (send_header):
-                self.headers['Set-Cookie'] = cookie.output()
+            self.headers['Set-Cookie'] = cookie.output()
+            RedisConnection.hset('session_' + sid, 'session_id', sid)
 
         return sid
 
