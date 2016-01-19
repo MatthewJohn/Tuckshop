@@ -19,8 +19,11 @@ class Float(PageBase):
             if inventory_transaction.inventory not in self.return_vars['active_inventorys']:
                 self.return_vars['active_inventorys'].append(inventory_transaction.inventory)
 
-        self.return_vars['float'] = getMoneyString(self.getCurrentFloat(), include_sign=True)
+        float_amount, credit_balance = self.getCurrentFloat()
+        self.return_vars['float'] = getMoneyString(float_amount, include_sign=True)
+        self.return_vars['credit_balance'] = getMoneyString(credit_balance, include_sign=True, colour_switch=True)
         self.return_vars['stock_value'] = getMoneyString(self.getStockValue(), include_sign=True)
+        self.return_vars['stock_owed'] = getMoneyString(self.getUnpaidStock(), include_sign=True, colour_switch=True)
 
     def processPost(self):
         """There are no post requests handled by the float page"""
@@ -30,6 +33,7 @@ class Float(PageBase):
         """Gets the current float - amount of money
            in the tuckshop"""
         float_amount = 0
+        total_user_balance = 0
         # Get the total amount payed for stock
         for stock_payment in StockPayment.objects.all():
             float_amount -= stock_payment.amount
@@ -40,9 +44,11 @@ class Float(PageBase):
 
         # Adjust float based on user's current credit
         for user in User.objects.all():
+            user_current_credit = user.getCurrentCredit()
             float_amount += user.getCurrentCredit()
+            total_user_balance += user.getCurrentCredit()
 
-        return float_amount
+        return float_amount, total_user_balance
 
     def getStockValue(self):
         """Returns the current sale value of all stock"""
@@ -50,3 +56,10 @@ class Float(PageBase):
         for item in Inventory.objects.all():
             stock_value += item.getStockValue()
         return stock_value
+
+    def getUnpaidStock(self):
+        """Returns the amount owed for stock"""
+        owed_amount = 0
+        for user in User.objects.all():
+            owed_amount += user.getTotalOwed()
+        return owed_amount

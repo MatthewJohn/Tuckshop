@@ -2,8 +2,10 @@ from os import environ
 import ldap
 
 
-def getMoneyString(credit, include_sign=True):
-  text_color = 'green' if credit >= 0 else 'red'
+def getMoneyString(credit, include_sign=True, colour_switch=False):
+  positive_colour = 'green' if not colour_switch else 'red'
+  negative_colour = 'red' if not colour_switch else 'green'
+  text_color = positive_colour if credit >= 0 else negative_colour
 
   if (credit < 0):
     credit_sign = '-'
