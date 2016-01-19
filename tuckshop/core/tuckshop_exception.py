@@ -1,0 +1,2 @@
+class TuckshopException(Exception):
+    pass
