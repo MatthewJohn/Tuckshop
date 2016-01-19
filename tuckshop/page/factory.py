@@ -29,9 +29,7 @@ class Factory(object):
 
         if page_object.requiresLogin():
             # If page requires login, redirect to login page
-            current_url = PageBase.getUrlParts(request_handler)
-            current_url = current_url[1:]
-            redirect_url = '/login/%s' % '/'.join(current_url)
+            redirect_url = Login.getLoginUrl(request_handler)
             page_object = Redirect(request_handler, redirect_url)
         elif page_object.requiresAdminAccess():
             page_object = NotFound(request_handler)
