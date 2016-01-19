@@ -31,6 +31,10 @@
                         <dd>{{ float }}</dd>
                         <dt>Stock Value</dt>
                         <dd>{{ stock_value }}</dd>
+                        <dt>Combined User Credit</dt>
+                        <dd>{{ credit_balance }}</dd>
+                        <dt>Owed to stockers</dt>
+                        <dd>{{ stock_owed }}</dd>
                     </dl>
                     <table class="table">
                         {% for inventory_item in active_inventorys %}
