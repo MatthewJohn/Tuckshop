@@ -11,6 +11,7 @@ from tuckshop.page.history import History
 from tuckshop.page.stock_history import StockHistory
 from tuckshop.page.stock import Stock
 from tuckshop.page.admin import Admin
+from tuckshop.page.float import Float
 
 class Factory(object):
     """Factory class for obtaining page objects"""
@@ -41,6 +42,8 @@ class Factory(object):
             page_object = Stock(request_handler)
         elif name == 'admin':
             page_object = Admin(request_handler)
+        elif name == 'float':
+            page_object = Float(request_handler)
         else:
             page_object = NotFound(request_handler)
 
