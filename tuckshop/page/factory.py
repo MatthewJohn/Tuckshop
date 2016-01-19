@@ -1,3 +1,5 @@
+"""Provides factory functions for the page classes"""
+
 from tuckshop.page.page_base import PageBase
 from tuckshop.page.not_found import NotFound
 from tuckshop.page.login import Login
@@ -5,11 +7,15 @@ from tuckshop.page.logout import Logout
 from tuckshop.page.credit import Credit
 from tuckshop.page.redirect import Redirect
 from tuckshop.page.static_file import JS, CSS, Font
+from tuckshop.page.history import History
 
 class Factory(object):
+    """Factory class for obtaining page objects"""
 
     @staticmethod
     def getPageObject(request_handler):
+        """Returns a page object for the current
+           request, based on the URL path"""
         name = PageBase.getUrlBase(request_handler)
         page_object = None
         if name == 'credit' or name == '':
@@ -24,6 +30,8 @@ class Factory(object):
             page_object = CSS(request_handler)
         elif name == 'font':
             page_object = Font(request_handler)
+        elif name == 'history':
+            page_object = History(request_handler)
         else:
             page_object = NotFound(request_handler)
 
