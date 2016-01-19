@@ -10,8 +10,18 @@ class Login(PageBase):
     ADMIN_PAGE = False
 
     def __init__(self, *args, **kwargs):
+        """Override the base init method to setup
+           redirect object"""
         super(Login, self).__init__(*args, **kwargs)
         self.redirect = None
+
+    @staticmethod
+    def getLoginUrl(request_handler):
+        """Determines the login url, which will redirect
+           back to the current page after a successful login"""
+        current_url = PageBase.getUrlParts(request_handler)
+        current_url = current_url[1:]
+        return '/login/%s' % '/'.join(current_url)
 
     def processPost(self):
         if ('action' in self.post_vars and self.post_vars['action'] == 'login'):
