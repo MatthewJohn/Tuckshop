@@ -9,6 +9,7 @@ from tuckshop.page.redirect import Redirect
 from tuckshop.page.static_file import JS, CSS, Font
 from tuckshop.page.history import History
 from tuckshop.page.stock_history import StockHistory
+from tuckshop.page.stock import Stock
 
 class Factory(object):
     """Factory class for obtaining page objects"""
@@ -35,6 +36,8 @@ class Factory(object):
             page_object = History(request_handler)
         elif name == 'stock-history':
             page_object = StockHistory(request_handler)
+        elif name == 'stock':
+            page_object = Stock(request_handler)
         else:
             page_object = NotFound(request_handler)
 
