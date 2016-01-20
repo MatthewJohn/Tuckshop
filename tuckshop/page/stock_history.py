@@ -27,7 +27,7 @@ class StockHistory(PageBase):
             array_end = page_number * TRANSACTION_PAGE_SIZE
             stock_payments = stock_payments[array_start:array_end]
 
-        self.return_vars['stock_payments'] = stock_payments
+        self.return_vars['payements'] = stock_payments
 
     def processPost(self):
         """Defines post method, but not required, as stock history
