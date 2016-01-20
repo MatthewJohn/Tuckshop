@@ -28,12 +28,18 @@
                 <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
                     <footer>
                         <ul class="nav nav-pills nav-justified">
+                            {% if page_object.isLoggedIn() %}
                             <li role="presentation"><a href="/credit">Credit</a></li>
                             <li role="presentation"><a href="/history">Transaction History</a></li>
                             <li role="presentation"><a href="/stock">Stock Management</a></li>
+                            {% if page_object.getCurrentUserObject().admin %}
                             <li role="presentation"><a href="/float">Float</a></li>
                             <li role="presentation"><a href="/admin">Admin</a></li>
+                            {% endif %}
                             <li role="presentation"><a href="/logout">Logout</a></li>
+                            {% else %}
+                            <li role="presentation"><a href="/login">Login</a></li>
+                            {% endif %}
                         </ul>
                     </footer>
                 </div>
