@@ -9,7 +9,7 @@
                                         {% for payment in payements %}
                                             <tr>
                                                 <td>{{ payment.toTimeString() }}</td>
-                                                <td>{% if payment.description %}{{ payment.description }}{% elif payment.inventory_transaction %}{{ payment.inventory_transaction.getDescriptiveTitle() }}{% endif %}</td>
+                                                <td>{% if payment.description %}{{ payment.description }}{% elif payment.inventory_transaction %}{{ payment.inventory_transaction.getDescriptiveTitle() }}{% else %}Credit{% endif %}</td>
                                                 <td>{{ payment.getAmountString() }}</td>
                                                 <td>{{ payment.getNotes() }}</td>
                                             </tr>

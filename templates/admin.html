@@ -100,6 +100,7 @@
                             {% for user in unpaid_users %}
                             <div class="col-md-12">
                                 <h3>{{ user.uid }}</h3>
+                                {% if user.getStockCreditValue() %}<span style="color: red">User has {{ user.getStockCreditValue(string=True, none_on_zero=True) }} in stock credit</span>{% endif %}
                                 <table class="table">
                                     <tr><th>Date</th><th>Item</th><th>Quantity</th><th>Quantity Remaining</th><th>Total</th><th>Remaining to pay</th></tr>
                                     {% for transaction in user.getUnpaidTransactions() %}

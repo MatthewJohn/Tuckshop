@@ -197,7 +197,7 @@ class PageBase(object):
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
 
-        if not sid or clear_cookie or not RedisConnection.hget('session_' + sid, 'session_id'):
+        if not sid or clear_cookie:
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             cookie['sid']['expires'] = 24 * 60 * 60
