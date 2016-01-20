@@ -28,13 +28,11 @@ class Admin(PageBase):
             user = User.objects.get(uid=self.post_vars['uid'])
             amount, semi_paid_transaction = user.payForStock(amount)
             if semi_paid_transaction:
-                self.return_vars['warning'] = ('Not enough to fully pay transaction: '
-                                               '%s (%s paid)' % (semi_paid_transaction,
-                                                                 getMoneyString(amount,
-                                                                                include_sign=False)))
+                self.return_vars['warning'] = ('Not enough to fully pay transaction: %s' % semi_paid_transaction)
             elif amount:
-                self.return_vars['warning'] = ('%s left after paying for all transactions' %
-                                               getMoneyString(amount, include_sign=False))
+                self.return_vars['warning'] = ('%s has been added as stock credit to %s' %
+                                               (getMoneyString(amount, include_sign=False),
+                                                self.post_vars['uid']))
 
         elif action == 'credit':
             if 'amount' not in self.post_vars or not int(self.post_vars['amount']):
