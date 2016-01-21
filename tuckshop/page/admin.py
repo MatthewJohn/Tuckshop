@@ -20,7 +20,8 @@ class Admin(PageBase):
                 self.return_vars['unpaid_users'].append(user)
 
     def processPost(self):
-        action = self.post_vars['action'] if 'action' in self.post_vars else None
+        action = self.getPostVariable(name='action', possible_values=['pay_stock', 'credit', 'debit'])
+
         if action == 'pay_stock':
             if 'amount' not in self.post_vars:
                 raise TuckshopException('Amount to pay must be specified and be a positive amount')
