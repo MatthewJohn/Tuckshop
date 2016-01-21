@@ -80,7 +80,7 @@ class User(models.Model):
                     remainder_stock_credit.save()
 
                     # Update the old stock payment to match the amount due for the transaction
-                    credit_stock_payment.amount = transaction.amount
+                    credit_stock_payment.amount = transaction.getRemainingCost()
                     credit_stock_payment.save()
 
                 # Assign the credit to the inventory transaction
