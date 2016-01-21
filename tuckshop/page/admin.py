@@ -31,7 +31,8 @@ class Admin(PageBase):
 
             amount = int(float(self.post_vars['amount']) * 100)
             user = User.objects.get(uid=self.post_vars['uid'])
-            amount, semi_paid_transaction = user.payForStock(amount)
+            amount, semi_paid_transaction = user.payForStock(author_user=self.getCurrentUserObject(),
+                                                             amount=amount)
             if semi_paid_transaction:
                 self.return_vars['warning'] = ('Not enough to fully pay transaction: %s' % semi_paid_transaction)
             elif amount:
