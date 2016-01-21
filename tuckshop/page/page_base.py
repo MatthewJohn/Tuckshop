@@ -8,6 +8,7 @@ import math
 from mimetypes import read_mime_types
 import time
 import os
+import re
 import traceback
 
 from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
@@ -77,6 +78,42 @@ class PageBase(object):
     @property
     def contentType(self):
         return self.CONTENT_TYPE
+
+    def getPostVariable(self, name, var_type=None, regex=None, default=None,
+                        custom_method=None, possible_values=None, message=None):
+        """Performs various checks of post vars and returns the value if checks pass"""
+        message = message if message else "%s does not conform" % name
+        message = "Error (%%s): %s" % message
+
+        # Check if variable is in post data
+        if name not in self.post_vars:
+            raise TuckshopException(message % 'PD0101')
+
+        value = self.post_vars[name]
+
+        # If var_type has been passed, attempt to perform it on the variable
+        if var_type:
+            try:
+                var_type(value)
+            except ValueError:
+                raise TuckshopException(message % 'PD0102')
+
+        # Perform regex on the variable, if it exists
+        if regex:
+            regex = r'^%s$' % regex
+            if not re.match(regex, value):
+                raise TuckshopException(message % 'PD0103')
+
+        if possible_values:
+            if value not in possible_values:
+                raise TuckshopException(message % 'PD0104')
+
+        if custom_method:
+            if not custom_method(value):
+                raise TuckshopException(message % 'PD0105')
+
+        return value
+
 
     def isLoggedIn(self):
         if (self.getSessionVar('username')):
