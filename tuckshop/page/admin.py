@@ -21,7 +21,12 @@ class Admin(PageBase):
     def processPost(self):
         action = self.post_vars['action'] if 'action' in self.post_vars else None
         if action == 'pay_stock':
-            if 'amount' not in self.post_vars or not float(self.post_vars['amount']):
+            if 'amount' not in self.post_vars:
+                self.return_vars['error'] = 'Amount to pay must be specified and be a positive amount'
+                return
+            try:
+                float(self.post_vars['amount'])
+            except:
                 self.return_vars['error'] = 'Amount to pay must be specified and be a positive amount'
                 return
             amount = int(float(self.post_vars['amount']) * 100)
