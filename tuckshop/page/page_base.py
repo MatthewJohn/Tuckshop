@@ -8,7 +8,7 @@ import math
 from mimetypes import read_mime_types
 import time
 import os
-
+import traceback
 
 from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -136,6 +136,20 @@ class PageBase(object):
         template = env.get_template('%s.html' % self.template)
         self.request_handler.wfile.write(template.render(**self.return_vars))
 
+    def attemptFunction(self, fun):
+        try:
+            fun()
+        except TuckshopException, e:
+            self.return_vars['error'] = str(e)
+            print 'Handled Error: %s' % str(e)
+        except Exception, e:
+            self.return_vars['error'] = ('An internal server error occurred. '
+                                         'Please contact a member of the TuckShop team immediately.')
+            print 'Unhandled error: %s' % str(e)
+            print traceback.print_exc()
+            self.response_code = 500
+
+
     def processRequest(self, post_request):
         """Handles requests by the web server"""
         # Ensure that authentication has been checked before
@@ -145,11 +159,11 @@ class PageBase(object):
         # If it was post request, process the POST variables and
         # process POST request
         if post_request:
-            self.getPostVariables()
-            self.processPost()
+            self.attemptFunction(self.getPostVariables)
+            self.attemptFunction(self.processPost)
 
         # Process page to determine page content
-        self.processPage()
+        self.attemptFunction(self.processPage)
 
         # Process template
         self.processHeaders()

@@ -3,6 +3,7 @@ import json
 
 from tuckshop.page.page_base import PageBase
 from tuckshop.app.models import Inventory, Transaction, InventoryTransaction
+from tuckshop.core.tuckshop_exception import TuckshopException
 
 class Stock(PageBase):
     """Class for displaying the stock page"""
@@ -47,8 +48,7 @@ class Stock(PageBase):
             if ('quantity' not in self.post_vars or
                     not int(self.post_vars['quantity'] or
                     int(self.post_vars['quantity']) < 1)):
-                self.return_vars['error'] = 'Quantity must be a positive integer'
-                return
+                raise TuckshopException('Quantity must be a positive integer')
 
             quantity = int(self.post_vars['quantity'])
             inventory_id = int(self.post_vars['inv_id'])
@@ -67,8 +67,7 @@ class Stock(PageBase):
                 sale_price = inventory_object.getLatestSalePrice()
 
             if sale_price is None:
-                self.return_vars['error'] = 'No previous stock for item - sale price must be specified'
-                return
+                raise TuckshopException('No previous stock for item - sale price must be specified')
 
             inv_transaction = InventoryTransaction(inventory=inventory_object, user=self.getCurrentUserObject(),
                                                    quantity=quantity, cost=cost, sale_price=sale_price,
@@ -81,11 +80,10 @@ class Stock(PageBase):
 
         elif (action == 'update'):
             if 'item_id' not in self.post_vars:
-                self.return_vars['error'] = 'Item ID not available'
-                return
+                raise TuckshopException('Item ID not available')
             if 'item_name' not in self.post_vars:
-                self.return_vars['error'] = 'Item must have a name'
-                return
+                raise TuckshopException('Item must have a name')
+
             item = Inventory.objects.get(pk=int(self.post_vars['item_id']))
             item.name = self.post_vars['item_name']
             item.url = None if 'image_url' not in self.post_vars else self.post_vars['image_url']
@@ -93,8 +91,8 @@ class Stock(PageBase):
 
         elif action == 'archive':
             if 'item_id' not in self.post_vars:
-                self.return_vars['error'] = 'Item ID not available'
-                return
+                raise TuckshopException('Item ID not available')
+
             item = Inventory.objects.get(pk=int(self.post_vars['item_id']))
 
             item.archive = (not item.archive)
@@ -102,16 +100,19 @@ class Stock(PageBase):
 
         elif action == 'delete':
             if 'item_id' not in self.post_vars:
-                self.return_vars['error'] = 'Item ID not available'
-                return
+                raise TuckshopException('Item ID not available')
+
             item = Inventory.objects.get(pk=int(self.post_vars['item_id']))
             if ((InventoryTransaction.objects.filter(inventory=item) or
                  Transaction.objects.filter(inventory_transaction__inventory=item))):
-                self.return_vars['error'] = 'Cannot delete item that has transactions related to it'
-                return
+                raise TuckshopException('Cannot delete item that has transactions related to it')
+
             item.delete()
 
         elif action == 'create':
+            if 'item_name' not in self.post_vars:
+                raise TuckshopException('Item must have a name')
+
             if 'item_archive' in self.post_vars:
                 archive = bool(self.post_vars['item_archive'])
             else:
