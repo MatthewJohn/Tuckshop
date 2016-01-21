@@ -58,7 +58,7 @@ class User(models.Model):
         """Returns the stock payments objects for credit"""
         return StockPayment.objects.filter(user=self, inventory_transaction__isnull=True)
 
-    def payForStock(self, amount):
+    def payForStock(self, author_user, amount):
         # Ensure that amount is a positive integer (or 0)
         if amount < 0:
             raise Exception('Amount must be a positive amount')
@@ -78,6 +78,8 @@ class User(models.Model):
                     remainder_stock_credit.pk = None
                     remainder_stock_credit.amount = int(credit_amount - due_amount)
                     remainder_stock_credit.save()
+                    remainder_stock_credit.timestamp = credit_stock_payment.timestamp
+                    remainder_stock_credit.save()
 
                     # Update the old stock payment to match the amount due for the transaction
                     credit_stock_payment.amount = transaction.getRemainingCost()
@@ -94,20 +96,32 @@ class User(models.Model):
             return False
 
         semi_paid_transaction = None
+        stock_payment_transaction = None
 
         for transaction in self.getUnpaidTransactions():
             if payUsingCredit(transaction):
                 continue
 
-            partial_payment = bool(transaction.getAmountPaid())
+            # Create a stock payement transaction if one has not already been created
+            if not stock_payment_transaction:
+                stock_payment_transaction = StockPaymentTransaction(author=author_user, user=self)
+                stock_payment_transaction.save()
+
+            # Since the transaction couldn't be paid with credit,
+            # start using the amount paid
             transaction_amount = 0
+
+            # If the remaining cost of the transaction is more than
+            # the amount remainig available to pay, create a StockPayment
+            # for the remaining amount in the stock payment transaction.
             if transaction.getRemainingCost() > amount:
                 transaction_amount = amount
                 semi_paid_transaction = transaction
             else:
                 transaction_amount = transaction.getRemainingCost()
 
-            StockPayment(user=self, inventory_transaction=transaction, amount=transaction_amount).save()
+            StockPayment(user=self, inventory_transaction=transaction, amount=transaction_amount,
+                         stock_payment_transaction=stock_payment_transaction).save()
             transaction.save()
 
             amount -= transaction_amount
@@ -118,7 +132,13 @@ class User(models.Model):
         # paid to the buyer, create a blank stock payment,
         # which can be used in future to pay off stock
         if amount:
-            StockPayment(user=self, amount=amount).save()
+            # Create a stock payement transaction if one has not already been created
+            if not stock_payment_transaction:
+                stock_payment_transaction = StockPaymentTransaction(author=author_user, user=self)
+                stock_payment_transaction.save()
+
+            StockPayment(user=self, amount=amount,
+                         stock_payment_transaction=stock_payment_transaction).save()
 
         return amount, semi_paid_transaction
 
@@ -221,6 +241,9 @@ class User(models.Model):
 
     def getStockPayments(self):
         return StockPayment.objects.filter(user=self)
+
+    def getStockPaymentTransactions(self):
+        return StockPaymentTransaction.objects.filter(user=self)
 
 
 class Inventory(models.Model):
@@ -470,10 +493,36 @@ class Transaction(models.Model):
         else:
             return self.timestamp.strftime("%d/%m/%y %H:%M")
 
+class StockPaymentTransaction(models.Model):
+    author = models.ForeignKey(User, related_name='author')
+    user = models.ForeignKey(User, related_name='user')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def toTimeString(self):
+        if self.timestamp.date() == datetime.datetime.today().date():
+            return self.timestamp.strftime("%H:%M")
+        else:
+            return self.timestamp.strftime("%d/%m/%y %H:%M")
+
+    def getAmountString(self):
+        return getMoneyString(self.getAmount(), include_sign=False)
+
+    def getStockPayments(self):
+        return StockPayment.objects.filter(stock_payment_transaction=self)
+
+    def getAmount(self):
+        amount = 0
+        for stock_payment in self.getStockPayments():
+            amount += stock_payment.amount
+        return amount
 
 class StockPayment(models.Model):
     user = models.ForeignKey(User)
     inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
+    stock_payment_transaction = models.ForeignKey(StockPaymentTransaction)
     amount = models.IntegerField()
     description = models.CharField(max_length=255, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)

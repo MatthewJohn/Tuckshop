@@ -3,20 +3,24 @@
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
                             <h2>Stock Payment History</h2>
-                            <table class="table">
-                                <tr><th>Date/Time</th><th>Payment Description</th><th>Amount</th><th>Notes</th></tr>
-                                    {% if payements %}
-                                        {% for payment in payements %}
-                                            <tr>
-                                                <td>{{ payment.toTimeString() }}</td>
-                                                <td>{% if payment.description %}{{ payment.description }}{% elif payment.inventory_transaction %}{{ payment.inventory_transaction.getDescriptiveTitle() }}{% else %}Credit{% endif %}</td>
-                                                <td>{{ payment.getAmountString() }}</td>
-                                                <td>{{ payment.getNotes() }}</td>
-                                            </tr>
+                                {% if stock_payment_transactions %}
+                                <table class="table">
+                                    {% for stock_payement_transaction in stock_payment_transactions %}
+                                    <tr><th>Stock Payment</th><th>Payer</th><th>Total</th></tr>
+                                    <tr><td>{{ stock_payement_transaction.toTimeString() }}</td><td>{{ stock_payement_transaction.author.uid }}</td><td>{{ stock_payement_transaction.getAmountString() }}</td></tr>
+                                    <tr><th></th><th>Date/Time</th><th>Payment Description</th><th>Amount</th><th>Notes</th></tr>
+                                    {% for payment in stock_payement_transaction.getStockPayments() %}
+                                        <tr>
+                                            <td></td>
+                                            <td>{{ payment.toTimeString() }}</td>
+                                            <td>{% if payment.description %}{{ payment.description }}{% elif payment.inventory_transaction %}{{ payment.inventory_transaction.getDescriptiveTitle() }}{% else %}Credit{% endif %}</td>
+                                            <td>{{ payment.getAmountString() }}</td>
+                                            <td>{{ payment.getNotes() }}</td>
+                                        </tr>
                                     {% endfor %}
+                                {% endfor %}
                                 </table>
                             {% else %}
-                                </table>
                                 <div class="alert alert-info" role="alert">There are no transactions available...</div>
                             {% endif %}
                             {% if page_data %}
