@@ -406,13 +406,17 @@ class InventoryTransaction(models.Model):
                 transactions.append(transaction)
         return transactions
 
+    def getQuantitySold(self):
+        """Returns the number of items sold, based on the number of
+           transactions"""
+        return len(Transaction.objects.filter(inventory_transaction=self))
+
     def getQuantityRemaining(self):
         """Returns the quantity available to purchase from the
-             inventory transaction"""
+           inventory transaction"""
         # Determine the number of items reamining, by removing the number of transactions
         # from the original amount available
-        transactions = Transaction.objects.filter(inventory_transaction=self)
-        return (self.quantity - len(transactions))
+        return (self.quantity - self.getQuantitySold())
 
     def toTimeString(self):
         """Converts the timestamp to a human-readable string"""
