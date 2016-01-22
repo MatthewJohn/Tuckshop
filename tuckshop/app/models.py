@@ -78,8 +78,6 @@ class User(models.Model):
                     remainder_stock_credit.pk = None
                     remainder_stock_credit.amount = int(credit_amount - due_amount)
                     remainder_stock_credit.save()
-                    remainder_stock_credit.timestamp = credit_stock_payment.timestamp
-                    remainder_stock_credit.save()
 
                     # Update the old stock payment to match the amount due for the transaction
                     credit_stock_payment.amount = transaction.getRemainingCost()
