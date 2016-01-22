@@ -4,7 +4,6 @@ import os
 import BaseHTTPServer
 
 from SocketServer import ThreadingMixIn
-import threading
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tuckshop.settings")
 
