@@ -57,8 +57,14 @@ class Float(PageBase):
                 # Create a new inventory transaction for the new item
                 new_inventory_transaction = InventoryTransaction.objects.get(pk=inventory_transaction_object.pk)
                 new_inventory_transaction.pk = None
+                # Update the quantity to reflect the quantity of items being
+                # updated
                 new_inventory_transaction.quantity = remaining_quantity
                 new_inventory_transaction.sale_price = new_sale_price
+
+                # Set the cost to 0, as the cost is captured in the original
+                # inventory transaction
+                new_inventory_transaction.cost = 0
                 new_inventory_transaction.save()
 
                 # Update the timestamp of the new inventory transaction, as it will
