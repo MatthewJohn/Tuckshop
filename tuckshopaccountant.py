@@ -3,6 +3,9 @@
 import os
 import BaseHTTPServer
 
+from SocketServer import ThreadingMixIn
+import threading
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tuckshop.settings")
 
 import django
@@ -22,8 +25,11 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         page_object.processRequest(post_request=True)
 
 
-if (__name__ == '__main__'):
+class ThreadedHTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
+    """Handle requests in a separate thread."""
+    pass
 
+if (__name__ == '__main__'):
     server_address = ('', 5000)
-    httpd = BaseHTTPServer.HTTPServer(server_address, RequestHandler)
+    httpd = ThreadedHTTPServer(server_address, RequestHandler)
     httpd.serve_forever()
