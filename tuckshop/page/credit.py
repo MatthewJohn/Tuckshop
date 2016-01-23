@@ -29,6 +29,8 @@ class Credit(PageBase):
         if action == pay:
             user_object = self.getCurrentUserObject()
             if amount:
+                description = self.getPostVariable(name='description', var_type=str, default=None,
+                                                   set_default=True)
                 if ENABLE_CUSTOM_PAYMENT:
                     user_object.removeCredit(amount=amount, description=description)
                 else:
