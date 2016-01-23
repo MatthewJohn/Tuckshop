@@ -37,8 +37,7 @@ class Admin(PageBase):
                 self.return_vars['warning'] = ('Not enough to fully pay transaction: %s' % semi_paid_transaction)
             elif amount:
                 self.return_vars['warning'] = ('%s has been added as stock credit to %s' %
-                                               (getMoneyString(amount, include_sign=False),
-                                                self.post_vars['uid']))
+                                               (getMoneyString(amount, include_sign=False), uid))
 
         elif action == 'credit':
             amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.POSITIVE], var_type=int,
