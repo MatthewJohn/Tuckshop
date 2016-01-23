@@ -25,7 +25,7 @@
                     function quantityAdjust(inv_trans_id, old_quantity)
                     {
                         new_quantity = document.getElementById('quantity_' + inv_trans_id).value;
-                        message = "Are you sure that you wish to change the stock quantity from <b>" + old_quantity + "</b> to <b>" + new_quantity + "</b> for this transaction?<br /><br />" +
+                        message = "Are you sure that you wish to change the remaining stock quantity from <b>" + old_quantity + "</b> to <b>" + new_quantity + "</b> for this transaction?<br /><br />" +
                             "<b>Note:</b> The transaction cost will NOT be changed.<br />" +
                             "You may only decrease the quantity to the point of no more items available (i.e. cannot be decreased below the number of items that have already been sold)";
                         showDialog(message, "update_quantity_" + inv_trans_id);
@@ -77,8 +77,8 @@
                                 <button class="btn btn-warning btn-xs" onclick="salePriceAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.sale_price }})">Update</button>
                             </td>
                             <td>
-                                {{ inventory_transaction.getQuantitySold() }}/<input value="{{ inventory_transaction.quantity }}" name="quantity" id="quantity_{{ inventory_transaction.pk }}" form="update_quantity_{{ inventory_transaction.pk }}" size="2" onkeypress="return handleEnter(event, function () { quantityAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.quantity }}); });" />
-                                <button class="btn btn-warning btn-xs" onclick="quantityAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.quantity }})">Update</button>
+                                <input value="{{ inventory_transaction.getQuantityRemaining() }}" name="quantity" id="quantity_{{ inventory_transaction.pk }}" form="update_quantity_{{ inventory_transaction.pk }}" size="2" onkeypress="return handleEnter(event, function () { quantityAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.getQuantityRemaining() }}); });" /> / {{ inventory_transaction.getQuantitySold() }} / {{ inventory_transaction.quantity }}
+                                <button class="btn btn-warning btn-xs" onclick="quantityAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.getQuantityRemaining() }})">Update</button>
                             </td>
                         </tr>
                         {% endfor -%}
