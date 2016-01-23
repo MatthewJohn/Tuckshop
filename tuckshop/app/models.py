@@ -1,6 +1,7 @@
 from django.db import models
 
 from tuckshop.core.config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
+from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.core.utils import getMoneyString
 import ldap
@@ -192,7 +193,10 @@ class User(models.Model):
 
     def removeCredit(self, amount=None, inventory=None, description=None):
         if (inventory and inventory.getQuantityRemaining() <= 0):
-            raise Exception('There are no items in stock')
+            raise TuckshopException('There are no items in stock')
+
+        if inventory and inventory.archive:
+            raise TuckshopException('Item is archived')
 
         current_credit = self.getCurrentCredit()
         transaction = Transaction(user=self, debit=True)
@@ -200,7 +204,7 @@ class User(models.Model):
         if (inventory):
             inventory_transaction = inventory.getCurrentInventoryTransaction()
             if inventory_transaction is None:
-                raise Exception('No inventory transaction available for this item')
+                raise TuckshopException('No inventory transaction available for this item')
 
             transaction.inventory_transaction = inventory_transaction
 
@@ -208,11 +212,11 @@ class User(models.Model):
                 amount = inventory_transaction.sale_price
 
         elif not amount:
-            raise Exception('Must pass amount or inventory')
+            raise TuckshopException('Must pass amount or inventory')
 
         amount = int(amount)
         if (amount < 0):
-            raise Exception('Cannot use negative number')
+            raise TuckshopException('Cannot use negative number')
 
         transaction.amount = amount
         transaction.description = description

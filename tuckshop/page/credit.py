@@ -1,9 +1,10 @@
-from tuckshop.page.page_base import PageBase
+from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.core.config import ENABLE_CUSTOM_PAYMENT
 from tuckshop.app.models import Inventory
 from tuckshop.core.tuckshop_exception import TuckshopException
 
 class Credit(PageBase):
+    """Class for displaying the credit page"""
 
     NAME = 'Credit'
     TEMPLATE = 'credit'
@@ -11,21 +12,27 @@ class Credit(PageBase):
     ADMIN_PAGE = False
 
     def processPage(self):
+        """Set variables for displaying the credit page"""
         self.return_vars['user'] = self.getCurrentUserObject()
         self.return_vars['enable_custom'] = ENABLE_CUSTOM_PAYMENT
         self.return_vars['inventory'] = Inventory.getAvailableItems()
 
     def processPost(self):
-        action = self.post_vars['action']
-        if (action == 'pay' and 'amount' in self.post_vars):
-            if ENABLE_CUSTOM_PAYMENT:
-                if 'description' in self.post_vars:
-                    description = self.post_vars['description']
+        """Process post requests to credit page"""
+        # Obtain post variables
+        action = self.getPostVariable(name='action', possible_values=['pay'])
+
+        item_id = self.getPostVariable(name='item_id', default=None, set_default=True, var_type=int,
+                                       special=[VariableVerificationTypes.POSITIVE])
+        amount = self.getPostVariable(name='amount', default=None, set_default=True, var_type=int,
+                                      special=[VariableVerificationTypes.POSITIVE])
+        if action == pay:
+            user_object = self.getCurrentUserObject()
+            if amount:
+                if ENABLE_CUSTOM_PAYMENT:
+                    user_object.removeCredit(amount=amount, description=description)
                 else:
-                    description = None
-                self.getCurrentUserObject().removeCredit(amount=int(self.post_vars['amount']), description=description)
-            else:
-                raise TuckshopException('Custom payment is disabled')
-        elif (action == 'pay' and 'item_id' in self.post_vars):
-            inventory_object = Inventory.objects.get(pk=self.post_vars['item_id'])
-            self.getCurrentUserObject().removeCredit(inventory=inventory_object)
+                    raise TuckshopException('Custom payment is disabled')
+            elif item_id:
+                inventory_object = Inventory.objects.get(pk=item_id)
+                user_object.removeCredit(inventory=inventory_object)
