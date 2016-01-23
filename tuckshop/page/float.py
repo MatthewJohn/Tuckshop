@@ -1,6 +1,6 @@
 """Contains class for float page"""
 
-from tuckshop.page.page_base import PageBase
+from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.utils import getMoneyString
 from tuckshop.app.models import (InventoryTransaction, StockPayment,
@@ -28,24 +28,23 @@ class Float(PageBase):
 
     def processPost(self):
         """There are no post requests handled by the float page"""
-        action = None if 'action' not in self.post_vars else self.post_vars['action']
-        inventory_transaction_id = None if 'inventory_transaction_id' not in self.post_vars else self.post_vars['inventory_transaction_id']
-        try:
-            inventory_transaction_id = int(inventory_transaction_id)
-        except:
-            raise TuckshopException('Transaction ID must an integer')
+        # Obtain common post variables and inventory transaction object
+        action = self.getPostVariable(name='action', possible_values=['update_sale_price', 'update_quantity'])
+        inventory_transaction_id = self.getPostVariable(name='inventory_transaction_id', var_type=int,
+                                                        special=[VariableVerificationTypes.POSITIVE])
         inventory_transaction_object = InventoryTransaction.objects.get(pk=inventory_transaction_id)
+
         if action == 'update_sale_price':
             # Ensure sale price is valid
-            if 'sale_price' not in self.post_vars or int(self.post_vars['sale_price']) < 0:
-                raise TuckshopException('Sale price must be a positive integer in pence')
+            new_sale_price = self.getPostVariable(name='sale_price', var_type=int,
+                                                  special=[VariableVerificationTypes.POSITIVE],
+                                                  message='Sale price must be a positive integer in pence')
 
             # Ensure that there are remaining available items in the transaction to change the price for
             if not inventory_transaction_object.getQuantityRemaining():
                 raise TuckshopException('There are no remaining items in the inventory transaction')
 
             old_sale_price = inventory_transaction_object.sale_price
-            new_sale_price = int(self.post_vars['sale_price'])
             remaining_quantity = inventory_transaction_object.getQuantityRemaining()
 
             if inventory_transaction_object.getQuantitySold():
@@ -82,13 +81,9 @@ class Float(PageBase):
 
         elif action == 'update_quantity':
             # Ensure sale price is valid
-            def ensureNoneNegative(variable):
-                if int(variable) < 0:
-                    return False
-                return True
             new_quantity_remaining = self.getPostVariable(name='quantity', var_type=int,
-                                                          message="Quantity must be a non-negative integer",
-                                                          custom_method=ensureNoneNegative)
+                                                          message='Quantity must be a non-negative integer',
+                                                          special=[VariableVerificationTypes.NON_NEGATIVE])
 
             # Determine the new quantity using the amount already sold and the new
             # amount unsold, by the user.
