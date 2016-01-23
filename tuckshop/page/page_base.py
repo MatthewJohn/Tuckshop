@@ -10,6 +10,7 @@ import time
 import os
 import re
 import traceback
+from django.db import transaction
 
 from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -199,7 +200,11 @@ class PageBase(object):
         # process POST request
         if post_request:
             self.attemptFunction(self.getPostVariables)
-            self.attemptFunction(self.processPost)
+
+            # Perform the post request handling in a database
+            # transaction, to ENSURE data entegrity
+            with transaction.atomic():
+                self.attemptFunction(self.processPost)
 
         # Process page to determine page content
         self.attemptFunction(self.processPage)
