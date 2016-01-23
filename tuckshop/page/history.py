@@ -18,7 +18,14 @@ class History(PageBase):
         url_parts = History.getUrlParts(self.request_handler)
         self.return_vars['page_data'] = []
         if len(transaction_history) > TRANSACTION_PAGE_SIZE:
-            page_number = int(url_parts[2]) if len(url_parts) == 3 else 1
+            # Attempt to retrieve page number from URL, default to 1
+            page_number = 1
+            if len(url_parts) == 3:
+                try:
+                    page_number = int(url_parts[2])
+                except ValueError:
+                    pass
+
             total_pages = int(ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
             self.return_vars['page_data'] = self.getPaginationData(page_number, total_pages,
                                                                    '/history/%s')
