@@ -37,6 +37,11 @@ class VariableVerificationTypes(object):
     FLOAT_MONEY = 2
 
 
+class InvalidPostVariable(TuckshopException):
+    """Post variable does not comform to specified restraints"""
+    pass
+
+
 class PageBase(object):
 
     CONTENT_TYPE = 'text/html'
@@ -100,7 +105,7 @@ class PageBase(object):
             if set_default:
                 return default
             else:
-                raise TuckshopException(message % 'PD0101')
+                raise InvalidPostVariable(message % 'PD0101')
 
         # Obtain the value from post data
         value = self.post_vars[name]
@@ -118,39 +123,39 @@ class PageBase(object):
             try:
                 value = var_type(value)
             except ValueError:
-                raise TuckshopException(message % 'PD0102')
+                raise InvalidPostVariable(message % 'PD0102')
 
         # Perform regex on the variable, if it exists
         if regex:
             regex = r'^%s$' % regex
             if not re.match(regex, value):
-                raise TuckshopException(message % 'PD0103')
+                raise InvalidPostVariable(message % 'PD0103')
 
         # If a list of possible value has been passed, ensure
         # that the value is in the list.
         if possible_values:
             if value not in possible_values:
-                raise TuckshopException(message % 'PD0104')
+                raise InvalidPostVariable(message % 'PD0104')
 
         # If a custom method has been provided, run it
         # and raise an except if it returns False
         if custom_method:
             if not custom_method(value):
-                raise TuckshopException(message % 'PD0105')
+                raise InvalidPostVariable(message % 'PD0105')
 
         # Perform pre-defined checks if a 'special' case has been passed
         # Ensure value is a positive integer
         if VariableVerificationTypes.POSITIVE in special and value <= 0:
-            raise TuckshopException(message % 'PD0106')
+            raise InvalidPostVariable(message % 'PD0106')
 
         # Ensure value is a non-negative integer
         if VariableVerificationTypes.NON_NEGATIVE in special and value < 0:
-            raise TuckshopException(message % 'PD0107')
+            raise InvalidPostVariable(message % 'PD0107')
 
         # Determin if, when rounded to 2dp, whether the value still equals
         # the original value.
         if VariableVerificationTypes.FLOAT_MONEY in special and round(value, 2) != value:
-            raise TuckshopException(message % 'PD0108')
+            raise InvalidPostVariable(message % 'PD0108')
 
         return value
 
