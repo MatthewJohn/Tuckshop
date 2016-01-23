@@ -82,15 +82,18 @@ class Float(PageBase):
 
         elif action == 'update_quantity':
             # Ensure sale price is valid
-            if 'quantity' not in self.post_vars or int(self.post_vars['quantity']) < 0:
-                raise TuckshopException('Sale price must be a positive integer in pence')
-            new_quantity = int(self.post_vars['quantity'])
-            old_quantity = inventory_transaction_object.quantity
+            def ensureNoneNegative(variable):
+                if int(variable) < 0:
+                    return False
+                return True
+            new_quantity_remaining = self.getPostVariable(name='quantity', var_type=int,
+                                                          message="Quantity must be a non-negative integer",
+                                                          custom_method=ensureNoneNegative)
 
-            # Ensure that there are remaining available items in the transaction to change the price for
-            if inventory_transaction_object.getQuantitySold() > new_quantity:
-                raise TuckshopException('The new quantity (%s) is less than the amount sold (%s)' %
-                                        (new_quantity, inventory_transaction_object.getQuantitySold()))
+            # Determine the new quantity using the amount already sold and the new
+            # amount unsold, by the user.
+            old_quantity = inventory_transaction_object.quantity
+            new_quantity = inventory_transaction_object.getQuantitySold() + new_quantity_remaining
 
             # Update the quantity of the sale transaction
             inventory_transaction_object.quantity = new_quantity

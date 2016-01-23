@@ -112,8 +112,10 @@ class PageBase(object):
             if not custom_method(value):
                 raise TuckshopException(message % 'PD0105')
 
-        return value
-
+        if var_type:
+            return var_type(value)
+        else:
+            return value
 
     def isLoggedIn(self):
         if (self.getSessionVar('username')):
