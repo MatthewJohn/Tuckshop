@@ -35,6 +35,7 @@ class VariableVerificationTypes(object):
     POSITIVE = 0
     NON_NEGATIVE = 1
     FLOAT_MONEY = 2
+    NOT_EMPTY = 3
 
 
 class InvalidPostVariable(TuckshopException):
@@ -125,37 +126,45 @@ class PageBase(object):
             except ValueError:
                 raise InvalidPostVariable(message % 'PD0102')
 
+            # Ensure that the valueof the item does not change
+            # when the type is applied
+            if value != var_type(value):
+                raise InvalidPostVariable(message % 'PD103')
+
         # Perform regex on the variable, if it exists
         if regex:
             regex = r'^%s$' % regex
             if not re.match(regex, value):
-                raise InvalidPostVariable(message % 'PD0103')
+                raise InvalidPostVariable(message % 'PD0104')
 
         # If a list of possible value has been passed, ensure
         # that the value is in the list.
         if possible_values:
             if value not in possible_values:
-                raise InvalidPostVariable(message % 'PD0104')
+                raise InvalidPostVariable(message % 'PD0105')
 
         # If a custom method has been provided, run it
         # and raise an except if it returns False
         if custom_method:
             if not custom_method(value):
-                raise InvalidPostVariable(message % 'PD0105')
+                raise InvalidPostVariable(message % 'PD0106')
 
         # Perform pre-defined checks if a 'special' case has been passed
         # Ensure value is a positive integer
         if VariableVerificationTypes.POSITIVE in special and value <= 0:
-            raise InvalidPostVariable(message % 'PD0106')
+            raise InvalidPostVariable(message % 'PD0107')
 
         # Ensure value is a non-negative integer
         if VariableVerificationTypes.NON_NEGATIVE in special and value < 0:
-            raise InvalidPostVariable(message % 'PD0107')
+            raise InvalidPostVariable(message % 'PD0108')
 
         # Determin if, when rounded to 2dp, whether the value still equals
         # the original value.
         if VariableVerificationTypes.FLOAT_MONEY in special and round(value, 2) != value:
-            raise InvalidPostVariable(message % 'PD0108')
+            raise InvalidPostVariable(message % 'PD0109')
+
+        if VariableVerificationTypes.NOT_EMPTY in special and value == '':
+            raise InvalidPostVariable(message % 'PD0110')
 
         return value
 
