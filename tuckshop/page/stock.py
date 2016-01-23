@@ -107,6 +107,8 @@ class Stock(PageBase):
             item.image_url = image_url
             item.save()
 
+            self.return_vars['info'] = 'Successfully updated item %s' % item.name
+
         elif action == 'archive':
             # Obtain item ID from POST variables
             item_id = self.getPostVariable(name='item_id', var_type=int,
@@ -118,12 +120,16 @@ class Stock(PageBase):
             item.archive = (not item.archive)
             item.save()
 
+            archive_action = 'archived' if item.archive else 'un-archived'
+            self.return_vars['info'] = 'Successfully %s item \'%s\'' % (archive_action, item.name)
+
         elif action == 'delete':
             # Obtain POST variables for updating an item
             item_id = self.getPostVariable(name='item_id', var_type=int,
                                            special=[VariableVerificationTypes.POSITIVE])
 
             item = Inventory.objects.get(pk=item_id)
+            item_name = item.name
 
             # Determine if the item exists and whether it has any related
             # inventory_transactions
@@ -133,6 +139,8 @@ class Stock(PageBase):
 
             # Delete the item
             item.delete()
+
+            self.return_vars['info'] = 'Successfully removed item \'%s\'' % item_name
 
         elif action == 'create':
             # Obtain values for new item from POST variables
@@ -147,3 +155,5 @@ class Stock(PageBase):
             # Create new item
             item = Inventory(name=item_name, image_url=image_url, archive=archive)
             item.save()
+
+            self.return_vars['info'] = 'Successfully created item \'%s\'' % item_name
