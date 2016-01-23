@@ -1,4 +1,4 @@
-from tuckshop.page.page_base import PageBase
+from tuckshop.page.page_base import PageBase, InvalidPostVariable
 from tuckshop.page.redirect import Redirect
 from tuckshop.core.utils import login
 
@@ -28,9 +28,15 @@ class Login(PageBase):
         if (action == 'login'):
             self.return_vars['auth_error'] = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
 
-            username = self.getPostVariable(name='username', var_type=str, regex='[a-zA-Z0-9]+')
-            password = self.getPostVariable(name='password', var_type=str)
-            if login(username, password):
+            username = None
+            password = None
+            try:
+                username = self.getPostVariable(name='username', var_type=str, regex='[a-zA-Z0-9]+')
+                password = self.getPostVariable(name='password', var_type=str)
+            except InvalidPostVariable:
+                return
+
+            if username and password and login(username, password):
                 self.setSessionVar('username', username)
                 self.setSessionVar('password', password)
                 self.return_vars['auth_error'] = None
