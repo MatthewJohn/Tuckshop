@@ -26,10 +26,11 @@ class Admin(PageBase):
             amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.FLOAT_MONEY,
                                                                   VariableVerificationTypes.POSITIVE],
                                           message='Amount to pay must be specified and be a valid positive amount')
+            uid = self.getPostVariable(name='uid', var_type=str)
 
             # Convert amout from pounds to pence
             amount = int(amount * 100)
-            user = User.objects.get(uid=self.post_vars['uid'])
+            user = User.objects.get(uid=uid)
             amount, semi_paid_transaction = user.payForStock(author_user=self.getCurrentUserObject(),
                                                              amount=amount)
             if semi_paid_transaction:
@@ -43,7 +44,6 @@ class Admin(PageBase):
             amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.POSITIVE], var_type=int,
                                           message="Amount must be a positive amount in pence")
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
-            uid = self.getPostVariable(name='uid', var_type=str)
 
             user = User.objects.get(uid=uid)
             user.addCredit(amount, description=description)
@@ -53,7 +53,6 @@ class Admin(PageBase):
             amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.POSITIVE], var_type=int,
                                           message="Amount must be a positive amount in pence")
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
-            uid = self.getPostVariable(name='uid', var_type=str)
 
             user = User.objects.get(uid=uid)
             user.removeCredit(amount, description=description)
