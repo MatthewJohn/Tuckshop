@@ -8,6 +8,7 @@ from tuckshop.app.models import (Inventory, InventoryTransaction,
                                  Transaction, User)
 from tuckshop.core.redis_connection import RedisConnection
 
+
 class FakeFileHandler(object):
     """Provides a fake file handler interface
        for use with the fake request handler"""
