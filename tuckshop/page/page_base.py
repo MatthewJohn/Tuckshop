@@ -8,7 +8,9 @@ import math
 from mimetypes import read_mime_types
 import time
 import os
-
+import re
+import traceback
+from django.db import transaction
 
 from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -24,6 +26,20 @@ class AuthenticationRequired(TuckshopException):
 
 
 class AdminPermissionRequired(TuckshopException):
+    pass
+
+
+class VariableVerificationTypes(object):
+    """Provides methods of passing verification
+       types to the getPostVariable method"""
+    POSITIVE = 0
+    NON_NEGATIVE = 1
+    FLOAT_MONEY = 2
+    NOT_EMPTY = 3
+
+
+class InvalidPostVariable(TuckshopException):
+    """Post variable does not comform to specified restraints"""
     pass
 
 
@@ -77,6 +93,80 @@ class PageBase(object):
     @property
     def contentType(self):
         return self.CONTENT_TYPE
+
+    def getPostVariable(self, name, var_type=None, regex=None, default=None,
+                        set_default=False, custom_method=None, possible_values=None,
+                        special=[], message=None):
+        """Performs various checks of post vars and returns the value if checks pass"""
+        message = message if message else "%s does not conform" % name
+        message = "Error (%%s): %s" % message
+
+        # Check if variable is in post data
+        if name not in self.post_vars:
+            if set_default:
+                return default
+            else:
+                raise InvalidPostVariable(message % 'PD0101')
+
+        # Obtain the value from post data
+        value = self.post_vars[name]
+
+        # If a type has not been specified and a 'special' case has been,
+        # set the var_type to an appropriate value.
+        if not var_type:
+            if (VariableVerificationTypes.POSITIVE in special
+                    or VariableVerificationTypes.NON_NEGATIVE in special
+                    or VariableVerificationTypes.FLOAT_MONEY in special):
+                var_type = float
+
+        # If var_type has been passed, attempt to perform it on the variable
+        if var_type:
+            try:
+                value = var_type(value)
+            except ValueError:
+                raise InvalidPostVariable(message % 'PD0102')
+
+            # Ensure that the valueof the item does not change
+            # when the type is applied
+            if value != var_type(value):
+                raise InvalidPostVariable(message % 'PD103')
+
+        # Perform regex on the variable, if it exists
+        if regex:
+            regex = r'^%s$' % regex
+            if not re.match(regex, value):
+                raise InvalidPostVariable(message % 'PD0104')
+
+        # If a list of possible value has been passed, ensure
+        # that the value is in the list.
+        if possible_values:
+            if value not in possible_values:
+                raise InvalidPostVariable(message % 'PD0105')
+
+        # If a custom method has been provided, run it
+        # and raise an except if it returns False
+        if custom_method:
+            if not custom_method(value):
+                raise InvalidPostVariable(message % 'PD0106')
+
+        # Perform pre-defined checks if a 'special' case has been passed
+        # Ensure value is a positive integer
+        if VariableVerificationTypes.POSITIVE in special and value <= 0:
+            raise InvalidPostVariable(message % 'PD0107')
+
+        # Ensure value is a non-negative integer
+        if VariableVerificationTypes.NON_NEGATIVE in special and value < 0:
+            raise InvalidPostVariable(message % 'PD0108')
+
+        # Determin if, when rounded to 2dp, whether the value still equals
+        # the original value.
+        if VariableVerificationTypes.FLOAT_MONEY in special and round(value, 2) != value:
+            raise InvalidPostVariable(message % 'PD0109')
+
+        if VariableVerificationTypes.NOT_EMPTY in special and value == '':
+            raise InvalidPostVariable(message % 'PD0110')
+
+        return value
 
     def isLoggedIn(self):
         if (self.getSessionVar('username')):
@@ -136,6 +226,20 @@ class PageBase(object):
         template = env.get_template('%s.html' % self.template)
         self.request_handler.wfile.write(template.render(**self.return_vars))
 
+    def attemptFunction(self, fun):
+        try:
+            fun()
+        except TuckshopException, e:
+            self.return_vars['error'] = str(e)
+            print 'Handled Error: %s' % str(e)
+        except Exception, e:
+            self.return_vars['error'] = ('An internal server error occurred. '
+                                         'Please contact a member of the TuckShop team immediately.')
+            print 'Unhandled error: %s' % str(e)
+            print traceback.print_exc()
+            self.response_code = 500
+
+
     def processRequest(self, post_request):
         """Handles requests by the web server"""
         # Ensure that authentication has been checked before
@@ -145,11 +249,15 @@ class PageBase(object):
         # If it was post request, process the POST variables and
         # process POST request
         if post_request:
-            self.getPostVariables()
-            self.processPost()
+            self.attemptFunction(self.getPostVariables)
+
+            # Perform the post request handling in a database
+            # transaction, to ENSURE data entegrity
+            with transaction.atomic():
+                self.attemptFunction(self.processPost)
 
         # Process page to determine page content
-        self.processPage()
+        self.attemptFunction(self.processPage)
 
         # Process template
         self.processHeaders()
@@ -197,7 +305,7 @@ class PageBase(object):
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
 
-        if not sid or clear_cookie or not RedisConnection.hget('session_' + sid, 'session_id'):
+        if not sid or clear_cookie:
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             cookie['sid']['expires'] = 24 * 60 * 60

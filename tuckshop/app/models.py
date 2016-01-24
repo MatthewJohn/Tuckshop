@@ -1,6 +1,7 @@
 from django.db import models
 
 from tuckshop.core.config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
+from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.core.utils import getMoneyString
 import ldap
@@ -40,33 +41,103 @@ class User(models.Model):
             if (self.uid == 'aa'):
                 self.admin = True
 
-    def payForStock(self, amount, pay_to_credit=False):
+    def getStockCreditValue(self, string=False, none_on_zero=False):
+        """Obtains the total stock credit the user has"""
+        credit = 0
+        for stock_payment in self.getStockCredit():
+            credit += stock_payment.amount
+
+        if credit == 0 and none_on_zero:
+            return None
+
+        if string:
+            return getMoneyString(credit, include_sign=False)
+        else:
+            return credit
+
+    def getStockCredit(self):
+        """Returns the stock payments objects for credit"""
+        return StockPayment.objects.filter(user=self, inventory_transaction__isnull=True)
+
+    def payForStock(self, author_user, amount):
+        # Ensure that amount is a positive integer (or 0)
         if amount < 0:
             raise Exception('Amount must be a positive amount')
 
+        def payUsingCredit(transaction):
+            # Iterate through credit payments, and attampt to pay
+            # for unpaid stock
+            for credit_stock_payment in self.getStockCredit():
+                credit_amount = credit_stock_payment.amount
+                due_amount = transaction.getRemainingCost()
+
+                # If the amount due to the transaction is less than is available
+                # in the credit, split the credit, so that the amount remaining on
+                # the transaction can be payed off.
+                if due_amount < credit_amount:
+                    remainder_stock_credit = StockPayment.objects.get(pk=credit_stock_payment.pk)
+                    remainder_stock_credit.pk = None
+                    remainder_stock_credit.amount = int(credit_amount - due_amount)
+                    remainder_stock_credit.save()
+
+                    # Update the old stock payment to match the amount due for the transaction
+                    credit_stock_payment.amount = transaction.getRemainingCost()
+                    credit_stock_payment.save()
+
+                # Assign the credit to the inventory transaction
+                credit_stock_payment.inventory_transaction = transaction
+                credit_stock_payment.save()
+
+                # If the transaction has been paid off, return True
+                if credit_amount >= due_amount:
+                    return True
+            # Otherwise if the transaction was not payed off, return False
+            return False
+
         semi_paid_transaction = None
-        initial_amount = amount
+        stock_payment_transaction = None
+
         for transaction in self.getUnpaidTransactions():
-            partial_payment = bool(transaction.getAmountPaid())
+            if payUsingCredit(transaction):
+                continue
+
+            # Create a stock payement transaction if one has not already been created
+            if not stock_payment_transaction:
+                stock_payment_transaction = StockPaymentTransaction(author=author_user, user=self)
+                stock_payment_transaction.save()
+
+            # Since the transaction couldn't be paid with credit,
+            # start using the amount paid
             transaction_amount = 0
+
+            # If the remaining cost of the transaction is more than
+            # the amount remainig available to pay, create a StockPayment
+            # for the remaining amount in the stock payment transaction.
             if transaction.getRemainingCost() > amount:
                 transaction_amount = amount
                 semi_paid_transaction = transaction
-                fully_paid = False
             else:
                 transaction_amount = transaction.getRemainingCost()
-                fully_paid = True
 
             StockPayment(user=self, inventory_transaction=transaction, amount=transaction_amount,
-                         fully_paid=fully_paid, installment=bool(transaction.cost - transaction_amount)).save()
+                         stock_payment_transaction=stock_payment_transaction).save()
             transaction.save()
 
             amount -= transaction_amount
             if amount == 0:
                 break
 
-        if semi_paid_transaction:
-            amount = initial_amount
+        # If there is still funds left in the amount
+        # paid to the buyer, create a blank stock payment,
+        # which can be used in future to pay off stock
+        if amount:
+            # Create a stock payement transaction if one has not already been created
+            if not stock_payment_transaction:
+                stock_payment_transaction = StockPaymentTransaction(author=author_user, user=self)
+                stock_payment_transaction.save()
+
+            StockPayment(user=self, amount=amount,
+                         stock_payment_transaction=stock_payment_transaction).save()
 
         return amount, semi_paid_transaction
 
@@ -122,7 +193,10 @@ class User(models.Model):
 
     def removeCredit(self, amount=None, inventory=None, description=None):
         if (inventory and inventory.getQuantityRemaining() <= 0):
-            raise Exception('There are no items in stock')
+            raise TuckshopException('There are no items in stock')
+
+        if inventory and inventory.archive:
+            raise TuckshopException('Item is archived')
 
         current_credit = self.getCurrentCredit()
         transaction = Transaction(user=self, debit=True)
@@ -130,7 +204,7 @@ class User(models.Model):
         if (inventory):
             inventory_transaction = inventory.getCurrentInventoryTransaction()
             if inventory_transaction is None:
-                raise Exception('No inventory transaction available for this item')
+                raise TuckshopException('No inventory transaction available for this item')
 
             transaction.inventory_transaction = inventory_transaction
 
@@ -138,11 +212,11 @@ class User(models.Model):
                 amount = inventory_transaction.sale_price
 
         elif not amount:
-            raise Exception('Must pass amount or inventory')
+            raise TuckshopException('Must pass amount or inventory')
 
         amount = int(amount)
         if (amount < 0):
-            raise Exception('Cannot use negative number')
+            raise TuckshopException('Cannot use negative number')
 
         transaction.amount = amount
         transaction.description = description
@@ -169,6 +243,9 @@ class User(models.Model):
 
     def getStockPayments(self):
         return StockPayment.objects.filter(user=self)
+
+    def getStockPaymentTransactions(self):
+        return StockPaymentTransaction.objects.filter(user=self)
 
 
 class Inventory(models.Model):
@@ -331,13 +408,17 @@ class InventoryTransaction(models.Model):
                 transactions.append(transaction)
         return transactions
 
+    def getQuantitySold(self):
+        """Returns the number of items sold, based on the number of
+           transactions"""
+        return len(Transaction.objects.filter(inventory_transaction=self))
+
     def getQuantityRemaining(self):
         """Returns the quantity available to purchase from the
-             inventory transaction"""
+           inventory transaction"""
         # Determine the number of items reamining, by removing the number of transactions
         # from the original amount available
-        transactions = Transaction.objects.filter(inventory_transaction=self)
-        return (self.quantity - len(transactions))
+        return (self.quantity - self.getQuantitySold())
 
     def toTimeString(self):
         """Converts the timestamp to a human-readable string"""
@@ -365,8 +446,11 @@ class InventoryTransaction(models.Model):
         """Get the cost as a human-readable string"""
         return getMoneyString(self.sale_price, include_sign=False)
 
+    def getStockPayments(self):
+        return StockPayment.objects.filter(inventory_transaction=self)
+
     def getAmountPaid(self):
-        return StockPayment.objects.filter(inventory_transaction=self).aggregate(models.Sum('amount'))['amount__sum'] or 0
+        return self.getStockPayments().aggregate(models.Sum('amount'))['amount__sum'] or 0
 
     def getRemainingCost(self):
         return (self.cost - self.getAmountPaid())
@@ -415,13 +499,37 @@ class Transaction(models.Model):
         else:
             return self.timestamp.strftime("%d/%m/%y %H:%M")
 
+class StockPaymentTransaction(models.Model):
+    author = models.ForeignKey(User, related_name='author')
+    user = models.ForeignKey(User, related_name='user')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def toTimeString(self):
+        if self.timestamp.date() == datetime.datetime.today().date():
+            return self.timestamp.strftime("%H:%M")
+        else:
+            return self.timestamp.strftime("%d/%m/%y %H:%M")
+
+    def getAmountString(self):
+        return getMoneyString(self.getAmount(), include_sign=False)
+
+    def getStockPayments(self):
+        return StockPayment.objects.filter(stock_payment_transaction=self)
+
+    def getAmount(self):
+        amount = 0
+        for stock_payment in self.getStockPayments():
+            amount += stock_payment.amount
+        return amount
 
 class StockPayment(models.Model):
     user = models.ForeignKey(User)
-    inventory_transaction = models.ForeignKey(InventoryTransaction)
+    inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
+    stock_payment_transaction = models.ForeignKey(StockPaymentTransaction)
     amount = models.IntegerField()
-    fully_paid = models.BooleanField(default=False)
-    installment = models.BooleanField(default=False)
     description = models.CharField(max_length=255, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -438,12 +546,16 @@ class StockPayment(models.Model):
         return getMoneyString(self.amount, include_sign=False)
 
     def getNotes(self):
-        if self.fully_paid:
-            notes = 'Fully paid'
-        else:
-            notes = 'Partially paid'
+        if not self.inventory_transaction:
+            return '(Will be used during next stock payment)'
 
-        if self.installment:
+        if self.inventory_transaction.getRemainingCost():
+            notes = 'Partially paid'
+        else:
+            notes = 'Fully paid'
+
+        if (len(self.inventory_transaction.getStockPayments()) > 1 or
+                self.inventory_transaction.getRemainingCost()):
             notes += ' (in installments)'
 
         return notes

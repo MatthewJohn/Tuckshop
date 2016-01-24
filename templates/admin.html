@@ -97,9 +97,15 @@
                                 {% endfor %}
                             </table>
                             <h2>Unpaid Stock</h2>
+                            {% if not unpaid_users %}
+                            <div class="alert alert-info" role="info">All stock has been paid</div>
+                            {% endif %}
                             {% for user in unpaid_users %}
                             <div class="col-md-12">
                                 <h3>{{ user.uid }}</h3>
+                                {% if user.getStockCreditValue() %}<span style="color: red">User has {{ user.getStockCreditValue(string=True, none_on_zero=True) }} in stock credit. This will be used during the next payment.</span>
+                                <br />
+                                <span>Note: Payments of &pound;0 will only pay stock transactions using the using the User's stock credit.</span>{% endif %}
                                 <table class="table">
                                     <tr><th>Date</th><th>Item</th><th>Quantity</th><th>Quantity Remaining</th><th>Total</th><th>Remaining to pay</th></tr>
                                     {% for transaction in user.getUnpaidTransactions() %}
