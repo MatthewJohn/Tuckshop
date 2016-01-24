@@ -107,12 +107,12 @@ def createTestItem(item_name, inventory_transactions=[],
         InventoryTransaction(inventory=inventory_object, user=user,
                              quantity=quantity, cost=cost, sale_price=sale_price,
                              description=description).save()
-        sleep(2)
+    for it in InventoryTransaction.objects.all():
+        print it.timestamp
 
     # Add transaction objects to add sales
     for transaction in transactions:
         user.removeCredit(inventory=inventory_object)
-        sleep(2)
 
     return inventory_object
 
