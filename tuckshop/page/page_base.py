@@ -12,7 +12,7 @@ import re
 import traceback
 from django.db import transaction
 
-from tuckshop.core.config import TOTAL_PAGE_DISPLAY, APP_NAME
+from tuckshop.core.config import Config
 from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.app.models import User
@@ -65,7 +65,7 @@ class PageBase(object):
             'error': None,
             'warning': None,
             'info': None,
-            'app_name': APP_NAME,
+            'app_name': Config.APP_NAME(),
             'page_name': self.name,
             'page_object': self
         }
@@ -270,10 +270,10 @@ class PageBase(object):
         raise NotImplementedError
 
     def getPaginationData(self, current_page, total_pages, url_template):
-        if (total_pages <= TOTAL_PAGE_DISPLAY):
+        if total_pages <= Config.TOTAL_PAGE_DISPLAY():
             page_range = range(1, total_pages + 1)
         else:
-            pages_up_down = int(math.ceil((TOTAL_PAGE_DISPLAY - 1) / 2))
+            pages_up_down = int(math.ceil((Config.TOTAL_PAGE_DISPLAY() - 1) / 2))
             page_range = range(current_page - pages_up_down, current_page + pages_up_downs + 1)
 
         page_data = []

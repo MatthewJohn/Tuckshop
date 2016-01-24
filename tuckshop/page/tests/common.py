@@ -1,9 +1,8 @@
 import Cookie
 import unittest
-from django.core.management import call_command
 import os
+from django.core.management import call_command
 
-from tuckshop.settings_unittest import DATABASES
 from tuckshop.app.models import (Inventory, InventoryTransaction,
                                  Transaction, User)
 from tuckshop.core.redis_connection import RedisConnection
@@ -64,10 +63,10 @@ def getPageObject(page_class, path, unittest, headers, post_variables={}):
     """Obtains a page object, passing a fake handler and
        overriding the getPostVariables method"""
 
-    def getPostVariables(self):
+    def getPostVariables(self, *args, **kwargs):
         """Set the post variables to the variables
            passed to the getPageObject method"""
-        self.post_variables = post_variables
+        self.post_vars = post_variables
 
     # Create fake handler for page request
     fake_handler = FakeHandler(unittest, path)
@@ -80,7 +79,7 @@ def getPageObject(page_class, path, unittest, headers, post_variables={}):
     page_object = page_class(fake_handler)
 
     # Override the getPostVariables method
-    page_object.getPostVariables = getPostVariables
+    page_object.getPostVariables = type(page_class.getPostVariables)(getPostVariables, page_object, page_class)
 
     # Return page object
     return page_object
@@ -140,9 +139,12 @@ class TestBase(unittest.TestCase):
         """Perform required tasks for each test"""
         # Create test database
         #  - Run django syncdb, to setup unittest DB
-        call_command('syncdb', interactive=False)
+        call_command('flush', interactive=False)
+
+        # Reset local redis database
+        if RedisConnection.CONNECTION:
+            RedisConnection.CONNECTION.cache = {}
 
     def tearDown(self):
         """Perform common teardown tasks"""
-        # Delete test database
-        os.remove(DATABASES['default']['NAME'])
+        pass
