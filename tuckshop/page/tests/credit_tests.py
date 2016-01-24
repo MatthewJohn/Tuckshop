@@ -118,7 +118,7 @@ class CreditTests(TestBase):
         credit_page.processRequest(post_request=True)
 
         user_object.refresh_from_db()
-        self.assertEqual(user_object.getCurrentCredit(), -480)
+        self.assertEqual(user_object.getCurrentCredit(), -448)
 
         # Ensure that the price is now disabled
         self.assertEqual(test_items[1].getQuantityRemaining(), 0)

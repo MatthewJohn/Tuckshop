@@ -289,7 +289,7 @@ class Inventory(models.Model):
         if (refresh_cache or not cache_exists):
 
             # Iterate through the inventory transactions for this item
-            for transaction in InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp'):
+            for transaction in InventoryTransaction.objects.filter(inventory=self).order_by('timestamp'):
 
                 # If the transaction has items left, set this as the current
                 # transaction and return it
