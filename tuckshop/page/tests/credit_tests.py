@@ -18,7 +18,7 @@ class CreditTests(TestBase):
         suite.addTest(CreditTests('test_disable_custom'))
         return suite
 
-    def create_test_items(self):
+    def create_test_items(self, user_object):
         """Creates several test inventory items"""
         # Create test items
         test_items = []
@@ -51,7 +51,7 @@ class CreditTests(TestBase):
         user_object = User.objects.get(uid='test')
 
         # Create test items
-        test_items = self.create_test_items()
+        test_items = self.create_test_items(user_object)
 
         # Perform request to page
         credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie})
