@@ -19,6 +19,7 @@ class CreditTests(TestBase):
            correct items are displayed on the page"""
         # Add 3 items to the database
         session, cookie = createTestSession(username='test', password='password')
+        test_items = []
         credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie})
         credit_page.processRequest(post_request=False)
         print credit_page.request_handler.output
