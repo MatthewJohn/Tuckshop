@@ -26,7 +26,7 @@ class History(PageBase):
                 except ValueError:
                     pass
 
-            total_pages = int(ceil((len(transaction_history) - 1) / TRANSACTION_PAGE_SIZE)) + 1
+            total_pages = int(ceil((len(transaction_history) - 1) / Config.TRANSACTION_PAGE_SIZE())) + 1
             self.return_vars['page_data'] = self.getPaginationData(page_number, total_pages,
                                                                    '/history/%s')
             array_start = (page_number - 1) * Config.TRANSACTION_PAGE_SIZE()
