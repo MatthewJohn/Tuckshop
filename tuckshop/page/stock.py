@@ -1,8 +1,9 @@
 """Contains class for stock page"""
 import json
 
-from tuckshop.page.page_base import PageBase
+from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.app.models import Inventory, Transaction, InventoryTransaction
+from tuckshop.core.tuckshop_exception import TuckshopException
 
 class Stock(PageBase):
     """Class for displaying the stock page"""
@@ -42,33 +43,44 @@ class Stock(PageBase):
 
     def processPost(self):
         """Handle post requests"""
-        action = None if 'action' not in self.post_vars else self.post_vars['action']
+        action = self.getPostVariable(name='action', possible_values=['Add Stock', 'update', 'archive',
+                                                                      'delete', 'create'])
         if (action == 'Add Stock'):
-            if ('quantity' not in self.post_vars or
-                    not int(self.post_vars['quantity'] or
-                    int(self.post_vars['quantity']) < 1)):
-                self.return_vars['error'] = 'Quantity must be a positive integer'
-                return
+            quantity = self.getPostVariable(name='quantity', var_type=int,
+                                            special=[VariableVerificationTypes.POSITIVE],
+                                            message='Quantity must be a positive integer')
 
-            quantity = int(self.post_vars['quantity'])
-            inventory_id = int(self.post_vars['inv_id'])
+            inventory_id = self.getPostVariable(name='inv_id', var_type=int,
+                                                special=[VariableVerificationTypes.POSITIVE])
             inventory_object = Inventory.objects.get(pk=inventory_id)
-            description = None if 'description' not in self.post_vars else str(self.post_vars['description'])
 
-            if (self.post_vars['cost_type'] == 'total'):
-                cost = int(float(self.post_vars['cost_total']) * 100)
 
-            elif (self.post_vars['cost_type'] == 'each'):
-                cost = (int(float(self.post_vars['cost_each']) * 100) * quantity)
+            description = self.getPostVariable(name='description', var_type=str, default=None,
+                                               set_default=True)
+            cost_type = self.getPostVariable(name='cost_type', var_type=str,
+                                             possible_values=['total', 'each'])
+            if cost_type == 'total':
+                cost_total = self.getPostVariable(name='cost_total', var_type=float,
+                                                  special=[VariableVerificationTypes.FLOAT_MONEY,
+                                                           VariableVerificationTypes.POSITIVE],
+                                                  message='Total cost must be a valid amount (e.g. 2.12 or 2)')
+                cost = int(cost_total * 100)
 
-            if ('sale_price' in self.post_vars and self.post_vars['sale_price']):
-                sale_price = self.post_vars['sale_price']
-            else:
+            elif cost_type == 'each':
+                cost_each = self.getPostVariable(name='cost_total', var_type=float,
+                                                 special=[VariableVerificationTypes.FLOAT_MONEY,
+                                                          VariableVerificationTypes.POSITIVE],
+                                                 message='Cost price (each) must be a valid amount (e.g. 2.12 or 2)')
+                cost = (int(cost_each * 100) * quantity)
+
+            sale_price = self.getPostVariable(name='sale_price', var_type=int,
+                                              special=[VariableVerificationTypes.POSITIVE],
+                                              default=None, set_default=True)
+            if not sale_price:
                 sale_price = inventory_object.getLatestSalePrice()
 
             if sale_price is None:
-                self.return_vars['error'] = 'No previous stock for item - sale price must be specified'
-                return
+                raise TuckshopException('No previous stock for item - sale price must be specified')
 
             inv_transaction = InventoryTransaction(inventory=inventory_object, user=self.getCurrentUserObject(),
                                                    quantity=quantity, cost=cost, sale_price=sale_price,
@@ -80,47 +92,68 @@ class Stock(PageBase):
             )
 
         elif (action == 'update'):
-            if 'item_id' not in self.post_vars:
-                self.return_vars['error'] = 'Item ID not available'
-                return
-            if 'item_name' not in self.post_vars:
-                self.return_vars['error'] = 'Item must have a name'
-                return
-            item = Inventory.objects.get(pk=int(self.post_vars['item_id']))
-            item.name = self.post_vars['item_name']
-            item.url = None if 'image_url' not in self.post_vars else self.post_vars['image_url']
+            # Obtain POST variables for updating an item
+            item_id = self.getPostVariable(name='item_id', var_type=int,
+                                           special=[VariableVerificationTypes.POSITIVE])
+            item_name = self.getPostVariable(name='item_name', var_type=str,
+                                             special=[VariableVerificationTypes.NOT_EMPTY],
+                                             message='Item must have a name')
+            image_url = self.getPostVariable(name='image_url', var_type=str,
+                                             default='', set_default=True)
+
+            # Update item with new values
+            item = Inventory.objects.get(pk=item_id)
+            item.name = item_name
+            item.image_url = image_url
             item.save()
 
-        elif action == 'archive':
-            if 'item_id' not in self.post_vars:
-                self.return_vars['error'] = 'Item ID not available'
-                return
-            item = Inventory.objects.get(pk=int(self.post_vars['item_id']))
+            self.return_vars['info'] = 'Successfully updated item %s' % item.name
 
+        elif action == 'archive':
+            # Obtain item ID from POST variables
+            item_id = self.getPostVariable(name='item_id', var_type=int,
+                                           special=[VariableVerificationTypes.POSITIVE])
+
+            item = Inventory.objects.get(pk=item_id)
+
+            # Reverse the item's archive status
             item.archive = (not item.archive)
             item.save()
 
+            archive_action = 'archived' if item.archive else 'un-archived'
+            self.return_vars['info'] = 'Successfully %s item \'%s\'' % (archive_action, item.name)
+
         elif action == 'delete':
-            if 'item_id' not in self.post_vars:
-                self.return_vars['error'] = 'Item ID not available'
-                return
-            item = Inventory.objects.get(pk=int(self.post_vars['item_id']))
+            # Obtain POST variables for updating an item
+            item_id = self.getPostVariable(name='item_id', var_type=int,
+                                           special=[VariableVerificationTypes.POSITIVE])
+
+            item = Inventory.objects.get(pk=item_id)
+            item_name = item.name
+
+            # Determine if the item exists and whether it has any related
+            # inventory_transactions
             if ((InventoryTransaction.objects.filter(inventory=item) or
                  Transaction.objects.filter(inventory_transaction__inventory=item))):
-                self.return_vars['error'] = 'Cannot delete item that has transactions related to it'
-                return
+                raise TuckshopException('Cannot delete item that has transactions related to it')
+
+            # Delete the item
             item.delete()
 
+            self.return_vars['info'] = 'Successfully removed item \'%s\'' % item_name
+
         elif action == 'create':
-            if 'item_archive' in self.post_vars:
-                archive = bool(self.post_vars['item_archive'])
-            else:
-                archive = False
+            # Obtain values for new item from POST variables
+            item_name = self.getPostVariable(name='item_name', var_type=str,
+                                             special=[VariableVerificationTypes.NOT_EMPTY],
+                                             message='Item must have a name')
+            image_url = self.getPostVariable(name='image_url', var_type=str,
+                                             default='', set_default=True)
+            archive = self.getPostVariable(name='item_archive', var_type=bool,
+                                           default=False, set_default=True)
 
-            if 'image_url' in self.post_vars:
-                image_url = str(self.post_vars['image_url'])
-            else:
-                image_url = ''
-
-            item = Inventory(name=str(self.post_vars['item_name']), image_url=image_url, archive=archive)
+            # Create new item
+            item = Inventory(name=item_name, image_url=image_url, archive=archive)
             item.save()
+
+            self.return_vars['info'] = 'Successfully created item \'%s\'' % item_name
