@@ -5,7 +5,7 @@ import os
 
 from tuckshop.settings_unittest import DATABASES
 from tuckshop.app.models import (Inventory, InventoryTransaction,
-                                 Transaction)
+                                 Transaction, User)
 from tuckshop.core.redis_connection import RedisConnection
 
 class FakeFileHandler(object):
@@ -13,14 +13,13 @@ class FakeFileHandler(object):
        for use with the fake request handler"""
     def __init__(self, parent):
         """Sets up object variables for storing test data"""
-        self.output = ''
         self.parent = parent
 
-    def wfile(self, value):
+    def write(self, value):
         """Performs a fake write and stores the output"""
         # Ensure that headers have been finished
         self.parent.unittest.assertTrue(self.parent.headers_finished)
-        self.output += value
+        self.parent.output += value
 
 class FakeHeaders(dict):
     """Fake headers handler"""
@@ -40,6 +39,11 @@ class FakeHandler(object):
         self.output = ''
         self.headers = FakeHeaders()
         self.headers_finished = False
+        self.response_code = None
+
+    def send_response(self, response_code):
+        """Sets the response code"""
+        self.response_code = response_code
 
     def send_header(self, key, value):
         """Fakes the send_header function.
@@ -52,8 +56,8 @@ class FakeHandler(object):
         """Fakes the end_headers function.
            Ensures that the function has not been run before and
            sets the end_headers to true"""
-        self.unittest.assertFalse(self.end_headers)
-        self.end_headers = True
+        self.unittest.assertFalse(self.headers_finished)
+        self.headers_finished = True
 
 def getPageObject(page_class, path, unittest, headers, post_variables={}):
     """Obtains a page object, passing a fake handler and
@@ -109,10 +113,18 @@ def createTestItem(item_name, inventory_transactions=[],
 
     return inventory_object
 
-def createTestSession(username=None, password=None):
+def createTestSession(username=None, password=None, admin=True):
     """Creates a test session and, if provided, sets up authentication"""
     # Create session sid
     sid = 'test_session'
+
+    # Create user object, if it doesn't already exist
+    try:
+        User.objects.get(uid=username)
+    except:
+        User(uid=username, admin=admin).save()
+
+    # Create cookie for setting header
     cookie = Cookie.SimpleCookie()
     cookie['sid'] = sid
     cookie['sid']['expires'] = 24 * 60 * 60
@@ -120,11 +132,9 @@ def createTestSession(username=None, password=None):
     RedisConnection.hset('session_' + sid, 'password', password)
     return sid, cookie.output()
 
-def TearDown():
-    """Tear down database, removing all test data"""
-    pass
 
 class TestBase(unittest.TestCase):
+    """Base test class for performing common setup/teardown methods"""
     def setUp(self):
         """Perform required tasks for each test"""
         # Create test database
