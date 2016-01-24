@@ -16,6 +16,8 @@ class CreditTests(TestBase):
         suite = unittest.TestSuite()
         suite.addTest(CreditTests('test_list_items'))
         suite.addTest(CreditTests('test_item_purchase'))
+        suite.addTest(CreditTests('test_non_existent_item_purchase'))
+        suite.addTest(CreditTests('test_purchase_archived_item'))
         suite.addTest(CreditTests('test_enable_custom'))
         suite.addTest(CreditTests('test_disable_custom'))
         return suite
@@ -87,6 +89,7 @@ class CreditTests(TestBase):
         self.assertTrue(test_items[2].getSalePriceString() not in credit_page.request_handler.output)
 
     def test_item_purchase(self):
+        """Test purchasing items"""
         # Create session and get user object
         session, cookie = createTestSession(username='test', password='password')
         user_object = User.objects.get(uid='test')
@@ -131,17 +134,62 @@ class CreditTests(TestBase):
                                         'item_id': test_items[1].pk
                                     })
         credit_page.processRequest(post_request=True)
-        print credit_page.return_vars['error']
+
+        # Assert that an error was displayed to the user and credit has not changed
+        self.assertEqual(credit_page.return_vars['error'], 'There are no items in stock')
+        self.assertEqual(user_object.getCurrentCredit(), -448)
 
     def test_non_existent_item_purchase(self):
+        """Test the purchase of non-existent items"""
+        # Create session and get user object
+        session, cookie = createTestSession(username='test', password='password')
+        user_object = User.objects.get(uid='test')
+
         # Create test items
-        test_items = self.create_test_items()
-        pass
+        test_items = self.create_test_items(user_object)
+
+        # Purchase an item
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': 5
+                                    })
+        credit_page.processRequest(post_request=True)
+
+        # Ensure that user's account has not been debitted.
+        self.assertEqual(user_object.getCurrentCredit(), -124)
 
     def test_purchase_archived_item(self):
+        """Tests attempts to purchasing archived items"""
+        # Create session and get user object
+        session, cookie = createTestSession(username='test', password='password')
+        user_object = User.objects.get(uid='test')
+
         # Create test items
-        test_items = self.create_test_items()
-        pass
+        test_items = self.create_test_items(user_object)
+
+        original_quantity = test_items[2].getQuantityRemaining()
+
+        # Purchase an item
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': test_items[2].pk
+                                    })
+        credit_page.processRequest(post_request=True)
+
+        # Ensure that user's account has not been debitted.
+        self.assertEqual(user_object.getCurrentCredit(), -124)
+
+        # Ensure error is displayed to user 
+        self.assertEqual(credit_page.return_vars['error'], 'Item is archived')
+
+        # Ensure item quantity has not changed
+        test_items[2].refresh_from_db()
+        self.assertEqual(test_items[2].getQuantityRemaining(), original_quantity)
+
+        # Ensure that there are no new transactions
+        self.assertEqual(len(InventoryTransaction.objects.filter(inventory=test_items[2])), 0)
 
     def test_enable_custom(self):
         """Ensures that the custom payment is present on the page when the
