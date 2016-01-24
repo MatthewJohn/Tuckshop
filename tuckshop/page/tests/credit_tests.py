@@ -3,7 +3,7 @@ import os
 
 from tuckshop.page.tests.common import (getPageObject, TestBase, createTestSession,
                                         createTestItem)
-from tuckshop.app.models import Inventory, InventoryTransaction, User
+from tuckshop.app.models import Inventory, InventoryTransaction, User, Transaction
 from tuckshop.core.config import Config
 from tuckshop.page.credit import Credit
 
@@ -189,7 +189,7 @@ class CreditTests(TestBase):
         self.assertEqual(test_items[2].getQuantityRemaining(), original_quantity)
 
         # Ensure that there are no new transactions
-        self.assertEqual(len(InventoryTransaction.objects.filter(inventory=test_items[2])), 0)
+        self.assertEqual(len(Transaction.objects.filter(inventory_transaction=test_items[2].getCurrentInventoryTransaction())), 0)
 
     def test_enable_custom(self):
         """Ensures that the custom payment is present on the page when the
