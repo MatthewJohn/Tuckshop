@@ -5,6 +5,7 @@ from tuckshop.page.tests.common import (getPageObject, TestBase, createTestSessi
                                         createTestItem)
 from tuckshop.app.models import Inventory, InventoryTransaction, User
 from tuckshop.core.config import Config
+from tuckshop.page.credit import Credit
 
 
 class CreditTests(TestBase):
@@ -14,6 +15,7 @@ class CreditTests(TestBase):
     def suite():
         suite = unittest.TestSuite()
         suite.addTest(CreditTests('test_list_items'))
+        suite.addTest(CreditTests('test_item_purchase'))
         suite.addTest(CreditTests('test_enable_custom'))
         suite.addTest(CreditTests('test_disable_custom'))
         return suite
@@ -28,7 +30,8 @@ class CreditTests(TestBase):
 
         # Create item, which should be displayed as 1 being available
         test_items.append(createTestItem('Test Item 2',
-                                         [[user_object, 123, 124, 2, '']],
+                                         [[user_object, 123, 124, 2, ''],
+                                          [user_object, 123, 200, 1, '']],
                                          [user_object]))
         test_items[1].image_url = 'http://example.com/test_image.png'
         test_items[1].save()
@@ -44,8 +47,6 @@ class CreditTests(TestBase):
     def test_list_items(self):
         """Tests the credit page, ensuring that the
            correct items are displayed on the page"""
-        from tuckshop.page.credit import Credit
-
         # Create session and get user object
         session, cookie = createTestSession(username='test', password='password')
         user_object = User.objects.get(uid='test')
@@ -70,16 +71,67 @@ class CreditTests(TestBase):
         # Assert that this has been passed to the template
         self.assertTrue(user_object.getCreditString() in credit_page.request_handler.output)
 
+        # Ensure that the items are passed to the return vars
+        self.assertTrue(test_items[0] in credit_page.return_vars['inventory'])
+        self.assertTrue(test_items[1] in credit_page.return_vars['inventory'])
+
+        # Ensure that the archived item is not present
+        self.assertTrue(test_items[2] not in credit_page.return_vars['inventory'])
+
         # Ensure that the available items are displayed on the page
+        self.assertTrue(test_items[0].name in credit_page.request_handler.output)
+        self.assertTrue(test_items[0].getSalePriceString() in credit_page.request_handler.output)
+        self.assertTrue(test_items[1].name in credit_page.request_handler.output)
+        self.assertTrue(test_items[1].getSalePriceString() in credit_page.request_handler.output)
+        self.assertTrue(test_items[2].name not in credit_page.request_handler.output)
+        self.assertTrue(test_items[2].getSalePriceString() not in credit_page.request_handler.output)
 
     def test_item_purchase(self):
+        # Create session and get user object
+        session, cookie = createTestSession(username='test', password='password')
+        user_object = User.objects.get(uid='test')
+
         # Create test items
-        test_items = self.create_test_items()
+        test_items = self.create_test_items(user_object)
 
-        # Attempt to purchase an item
+        # Purchase an item
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': test_items[1].pk
+                                    })
+        credit_page.processRequest(post_request=True)
 
-        # Ensure that the item is no longer available
-        pass
+        # Ensure that the user has been debitted
+        user_object.refresh_from_db()
+        self.assertEqual(user_object.getCurrentCredit(), -248)
+
+        # Ensure that the amount of the item has now risen to the price of the second inventory transaction
+        self.assertTrue('&pound;2.00' in credit_page.request_handler.output)
+
+        # Purchase the same item and ensure that the new price has been used
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': test_items[1].pk
+                                    })
+        credit_page.processRequest(post_request=True)
+
+        user_object.refresh_from_db()
+        self.assertEqual(user_object.getCurrentCredit(), -480)
+
+        # Ensure that the price is now disabled
+        self.assertEqual(test_items[1].getQuantityRemaining(), 0)
+        self.assertTrue('<input type="submit" class="btn btn-primary" value="&pound;2.00" role="button" disabled/>' in credit_page.request_handler.output)
+
+        # Attempt to purchase another item and ensure an error is displayed
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': test_items[1].pk
+                                    })
+        credit_page.processRequest(post_request=True)
+        print credit_page.return_vars['error']
 
     def test_non_existent_item_purchase(self):
         # Create test items
@@ -95,9 +147,7 @@ class CreditTests(TestBase):
         """Ensures that the custom payment is present on the page when the
            configuration is enabled. And ensure functionality works
            as expected"""
-        from tuckshop.page.credit import Credit
-
-        os.environ['ENABLE_CUSTOM_PAYMENT'] = "1"
+        os.environ['ENABLE_CUSTOM_PAYMENT'] = '1'
 
         # Create session and get user object
         session, cookie = createTestSession(username='test', password='password')
@@ -130,8 +180,6 @@ class CreditTests(TestBase):
     def test_disable_custom(self):
         """Ensures that the custom payment is removed from
            the page when the configuration has disabled"""
-        from tuckshop.page.credit import Credit
-
         os.environ['ENABLE_CUSTOM_PAYMENT'] = '0'
 
         # Create session and get user object

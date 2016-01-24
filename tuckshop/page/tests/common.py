@@ -92,6 +92,7 @@ def createTestItem(item_name, inventory_transactions=[],
             user, cost, sale_price, quantity, description
         ], ...]
        transactions = [user, user, ...]"""
+    from time import sleep
     # Create inventory object
     inventory_object = Inventory(name=item_name)
     inventory_object.save()
@@ -106,10 +107,12 @@ def createTestItem(item_name, inventory_transactions=[],
         InventoryTransaction(inventory=inventory_object, user=user,
                              quantity=quantity, cost=cost, sale_price=sale_price,
                              description=description).save()
+        sleep(2)
 
     # Add transaction objects to add sales
     for transaction in transactions:
         user.removeCredit(inventory=inventory_object)
+        sleep(2)
 
     return inventory_object
 
