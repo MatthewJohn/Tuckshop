@@ -174,7 +174,7 @@ class User(models.Model):
             RedisConnection.set(User.current_credit_cache_key % self.id, balance)
         else:
             # Obtain credit from cache
-            balance = RedisConnection.get(User.current_credit_cache_key % self.id)
+            balance = int(RedisConnection.get(User.current_credit_cache_key % self.id))
         return balance
 
     def addCredit(self, amount, description=None):
