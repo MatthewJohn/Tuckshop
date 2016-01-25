@@ -13,6 +13,7 @@ from os import environ
 class User(models.Model):
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     current_credit_cache_key = 'User_%s_credit'
 
@@ -253,6 +254,7 @@ class Inventory(models.Model):
     bardcode_number = models.CharField(max_length=25, null=True)
     image_url = models.CharField(max_length=250, null=True)
     archive = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     inventory_transaction_cache_key = 'Inventory_%s_inventory_transaction'
 
@@ -329,12 +331,29 @@ class Inventory(models.Model):
 
     @staticmethod
     def getAvailableItems():
+        """Returns the available items"""
         items = Inventory.objects.filter(archive=False)
+        # If out of stock items are not show, filter
+        # them from the query
         if not Config.SHOW_OUT_OF_STOCK_ITEMS():
             for item in items:
                 if (not item.getCurrentInventoryTransaction().getQuantityRemaining()):
                     items.remove(item)
 
+        return items
+
+    @staticmethod
+    def getAvailableItemsByPopularity():
+        """Returns available items, sorted by popularity"""
+        items = Inventory.getAvailableItems()
+
+        # Anotate the results with the number of transactions
+        items = items.annotate(transaction_count=models.Count('inventorytransaction__transaction'))
+
+        # Sort by the number of transactions, then by timestamp
+        items = items.order_by('-transaction_count', '-timestamp')
+
+        # Return the ordered results
         return items
 
     def getSalePriceString(self):
