@@ -1,21 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
-                    <script>
-                    function updateSearch()
-                    {
-                        search_string = document.getElementById('search_input').value
-                        for (i = 0; i < len(search_string.split(' ')); i ++)
-                        {
-                            search_word = search_string.split(' ')[i];
-                            search_items = document.getElementsByClassName('search_item');
-                            for (n = 0; n < len(search_items); n ++)
-                            {
-                                item_name = search_items[n].getElementsByClassName('')
-                                if 
-                            }
-                        }
-                    }
-                    </script>
+                    <script src="/js/credit-search.js"></script>
+
                     <div class="row" id="central">
                         <div class="col-md-8 col-sm-12 col-xs-12">
                             <h1>{{ app_name }}</h1>
@@ -25,12 +11,12 @@
                                 <p>in your account. </p>
                             </div>
                         </div>
-                        <div class="col-md-12">
-                            <div class="col-lg-12">
-                                <div class="col-lg-3 col-md-4 col-sm-12 col-xs-12">
-                                    <input id="search_input" class="form-control" placeholder="Search..." onkeypress="updateSearch()" />
-                                </div>
+                        <div class="col-lg-12">
+                            <div class="col-lg-3 col-md-4 col-sm-12 col-xs-12" onkeyup="updateSearch(event)" >
+                                <input id="search_input" class="form-control" placeholder="Search..."/>
                             </div>
+                        </div>
+                        <div class="col-md-12">
 
                             {% for item in inventory %}
                             <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 search_item">
