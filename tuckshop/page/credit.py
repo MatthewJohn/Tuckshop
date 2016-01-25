@@ -1,5 +1,5 @@
 from tuckshop.page.page_base import PageBase, VariableVerificationTypes
-from tuckshop.core.config import ENABLE_CUSTOM_PAYMENT
+from tuckshop.core.config import Config
 from tuckshop.app.models import Inventory
 from tuckshop.core.tuckshop_exception import TuckshopException
 
@@ -14,7 +14,7 @@ class Credit(PageBase):
     def processPage(self):
         """Set variables for displaying the credit page"""
         self.return_vars['user'] = self.getCurrentUserObject()
-        self.return_vars['enable_custom'] = ENABLE_CUSTOM_PAYMENT
+        self.return_vars['enable_custom'] = Config.ENABLE_CUSTOM_PAYMENT()
         self.return_vars['inventory'] = Inventory.getAvailableItems()
 
     def processPost(self):
@@ -26,12 +26,12 @@ class Credit(PageBase):
                                        special=[VariableVerificationTypes.POSITIVE])
         amount = self.getPostVariable(name='amount', default=None, set_default=True, var_type=int,
                                       special=[VariableVerificationTypes.POSITIVE])
-        if action == pay:
+        if action == 'pay':
             user_object = self.getCurrentUserObject()
             if amount:
                 description = self.getPostVariable(name='description', var_type=str, default=None,
                                                    set_default=True)
-                if ENABLE_CUSTOM_PAYMENT:
+                if Config.ENABLE_CUSTOM_PAYMENT():
                     user_object.removeCredit(amount=amount, description=description)
                 else:
                     raise TuckshopException('Custom payment is disabled')

@@ -25,7 +25,7 @@ def getMoneyString(credit, include_sign=True, colour_switch=False):
 
 
 def login(username, password):
-    from tuckshop.core.config import LDAP_SERVER
+    from tuckshop.core.config import Config
     from tuckshop.app.models import User
     if 'TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']:
         # If tuckshop in development mode, match all passwords
@@ -34,7 +34,7 @@ def login(username, password):
             return False
     else:
         # Otherwise authenticate against LDAP server
-        ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
+        ldap_obj = ldap.initialize('ldap://%s:389' % Config.LDAP_SERVER())
         dn = 'uid=%s,ou=People,dc=example,dc=com' % username
         try:
             # Attempt to bind to LDAP
