@@ -108,8 +108,8 @@ class Float(PageBase):
         for stock_payment in StockPayment.objects.all():
             float_amount -= stock_payment.amount
 
-        # Get the total value of payements for items (transactions with linked inventory items)
-        for transaction in Transaction.objects.filter(inventory_transaction__isnull=False):
+        # Get the total value of payements for items
+        for transaction in Transaction.objects.filter():
             float_amount += transaction.amount
 
         # Adjust float based on user's current credit
