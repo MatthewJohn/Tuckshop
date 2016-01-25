@@ -41,6 +41,9 @@ class LocalRedis(object):
     def exists(self, name):
         return (name in self.cache)
 
+    def flushdb(self):
+        self.cache = {}
+
 
 class RedisConnection(object):
 
@@ -80,3 +83,7 @@ class RedisConnection(object):
     @staticmethod
     def exists(name):
         return RedisConnection._getConnection().exists(name)
+
+    @staticmethod
+    def flushdb():
+        return RedisConnection._getConnection().flushdb()
