@@ -148,4 +148,6 @@ class TestBase(unittest.TestCase):
 
     def tearDown(self):
         """Perform common teardown tasks"""
-        pass
+        # Reset local redis database
+        if RedisConnection.CONNECTION:
+            RedisConnection.CONNECTION.flushdb()
