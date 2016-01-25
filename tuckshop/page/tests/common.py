@@ -152,7 +152,7 @@ class TestBase(unittest.TestCase):
         self.user_object = User.objects.get(uid=self.test_username)
 
         # Create test items
-        self.test_items = self.create_test_items(self.user_object)
+        self.test_items = self.create_test_items()
 
     def tearDown(self):
         """Perform common teardown tasks"""
@@ -160,7 +160,7 @@ class TestBase(unittest.TestCase):
         if RedisConnection.CONNECTION:
             RedisConnection.CONNECTION.flushdb()
 
-    def create_test_items(self, user_object):
+    def create_test_items(self):
         """Creates several test inventory items"""
         # Create test items
         test_items = []
@@ -170,16 +170,19 @@ class TestBase(unittest.TestCase):
 
         # Create item, which should be displayed as 1 being available
         test_items.append(createTestItem('Test Item 2',
-                                         [[user_object, 123, 124, 2, ''],
-                                          [user_object, 123, 200, 1, '']],
-                                         [user_object]))
+                                         [[self.user_object, 123, 124, 2, ''],
+                                          [self.user_object, 123, 200, 1, '']],
+                                         [self.user_object]))
         test_items[1].image_url = 'http://example.com/test_image.png'
         test_items[1].save()
 
         # Create archived test item, which should not be displayed on page.
-        test_items.append(createTestItem('Test Item 3', [[user_object, 254, 255, 2, '']]))
+        test_items.append(createTestItem('Test Item 3', [[self.user_object, 254, 255, 2, '']]))
         test_items[2].image_url = 'http://doesnotexist.onpage/image.png'
         test_items[2].archive = True
         test_items[2].save()
+
+        # Create test item that is sold out
+        test_items.append(createTestItem('OutOfStockItem'))
 
         return test_items

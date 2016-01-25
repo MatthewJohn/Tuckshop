@@ -13,6 +13,7 @@ from os import environ
 class User(models.Model):
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     current_credit_cache_key = 'User_%s_credit'
 
@@ -253,6 +254,7 @@ class Inventory(models.Model):
     bardcode_number = models.CharField(max_length=25, null=True)
     image_url = models.CharField(max_length=250, null=True)
     archive = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     inventory_transaction_cache_key = 'Inventory_%s_inventory_transaction'
 
@@ -344,9 +346,14 @@ class Inventory(models.Model):
     def getAvailableItemsByPopularity():
         """Returns available items, sorted by popularity"""
         items = Inventory.getAvailableItems()
-        # Sort by the number of transactions
+
+        # Anotate the results with the number of transactions
         items = items.annotate(transaction_count=models.Count('inventorytransaction__transaction'))
-        items = items.order_by('-transaction_count')
+
+        # Sort by the number of transactions, then by timestamp
+        items = items.order_by('-transaction_count', '-timestamp')
+
+        # Return the ordered results
         return items
 
     def getSalePriceString(self):
