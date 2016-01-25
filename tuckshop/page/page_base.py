@@ -236,6 +236,8 @@ class PageBase(object):
             self.return_vars['error'] = ('An internal server error occurred. '
                                          'Please contact a member of the TuckShop team immediately.')
             print 'Unhandled error: %s' % str(e)
+            print 'POST: %s' % self.post_vars
+            print 'Headers: %s' % self.request_handler.headers
             print traceback.print_exc()
             self.response_code = 500
 
