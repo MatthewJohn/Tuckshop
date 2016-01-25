@@ -38,3 +38,7 @@ class Credit(PageBase):
             elif item_id:
                 inventory_object = Inventory.objects.get(pk=item_id)
                 user_object.removeCredit(inventory=inventory_object)
+            elif Config.ENABLE_CUSTOM_PAYMENT():
+                raise TuckshopException('Amount must be specified')
+            else:
+                raise Exception('Item ID was not specified')
