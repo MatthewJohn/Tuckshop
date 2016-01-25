@@ -1,6 +1,6 @@
 from django.db import models
 
-from tuckshop.core.config import LDAP_SERVER, SHOW_OUT_OF_STOCK_ITEMS
+from tuckshop.core.config import Config
 from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.core.utils import getMoneyString
@@ -22,7 +22,7 @@ class User(models.Model):
 
         if not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
             # Obtain information from LDAP
-            ldap_obj = ldap.initialize('ldap://%s:389' % LDAP_SERVER)
+            ldap_obj = ldap.initialize('ldap://%s:389' % Config.LDAP_SERVER())
             dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % self.uid
             ldap_obj.simple_bind_s()
             res = ldap_obj.search_s('o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk', ldap.SCOPE_ONELEVEL,
@@ -289,7 +289,7 @@ class Inventory(models.Model):
         if (refresh_cache or not cache_exists):
 
             # Iterate through the inventory transactions for this item
-            for transaction in InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp'):
+            for transaction in InventoryTransaction.objects.filter(inventory=self).order_by('timestamp'):
 
                 # If the transaction has items left, set this as the current
                 # transaction and return it
@@ -330,7 +330,7 @@ class Inventory(models.Model):
     @staticmethod
     def getAvailableItems():
         items = Inventory.objects.filter(archive=False)
-        if not SHOW_OUT_OF_STOCK_ITEMS:
+        if not Config.SHOW_OUT_OF_STOCK_ITEMS():
             for item in items:
                 if (not item.getCurrentInventoryTransaction().getQuantityRemaining()):
                     items.remove(item)
