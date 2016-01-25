@@ -1,10 +1,9 @@
 import Cookie
 import unittest
-import os
 from django.core.management import call_command
 
 from tuckshop.app.models import (Inventory, InventoryTransaction,
-                                 Transaction, User)
+                                 User)
 from tuckshop.core.redis_connection import RedisConnection
 
 
@@ -79,7 +78,8 @@ def getPageObject(page_class, path, unittest, headers, post_variables={}):
     page_object = page_class(fake_handler)
 
     # Override the getPostVariables method
-    page_object.getPostVariables = type(page_class.getPostVariables)(getPostVariables, page_object, page_class)
+    method_type = type(page_class.getPostVariables)
+    page_object.getPostVariables = method_type(getPostVariables, page_object, page_class)
 
     # Return page object
     return page_object
@@ -92,7 +92,6 @@ def createTestItem(item_name, inventory_transactions=[],
             user, cost, sale_price, quantity, description
         ], ...]
        transactions = [user, user, ...]"""
-    from time import sleep
     # Create inventory object
     inventory_object = Inventory(name=item_name)
     inventory_object.save()
@@ -122,7 +121,7 @@ def createTestSession(username=None, password=None, admin=True):
     # Create user object, if it doesn't already exist
     try:
         User.objects.get(uid=username)
-    except:
+    except Exception:
         User(uid=username, admin=admin).save()
 
     # Create cookie for setting header
@@ -146,8 +145,41 @@ class TestBase(unittest.TestCase):
         if RedisConnection.CONNECTION:
             RedisConnection.CONNECTION.flushdb()
 
+        # Create session and get user object
+        self.test_username = 'test'
+        self.session, self.cookie = createTestSession(username=self.test_username,
+                                                      password='password')
+        self.user_object = User.objects.get(uid=self.test_username)
+
+        # Create test items
+        self.test_items = self.create_test_items(self.user_object)
+
     def tearDown(self):
         """Perform common teardown tasks"""
         # Reset local redis database
         if RedisConnection.CONNECTION:
             RedisConnection.CONNECTION.flushdb()
+
+    def create_test_items(self, user_object):
+        """Creates several test inventory items"""
+        # Create test items
+        test_items = []
+
+        # Create item with no inventory transactions, which should display the amount 'N/A'
+        test_items.append(createTestItem('Test Item 1'))
+
+        # Create item, which should be displayed as 1 being available
+        test_items.append(createTestItem('Test Item 2',
+                                         [[user_object, 123, 124, 2, ''],
+                                          [user_object, 123, 200, 1, '']],
+                                         [user_object]))
+        test_items[1].image_url = 'http://example.com/test_image.png'
+        test_items[1].save()
+
+        # Create archived test item, which should not be displayed on page.
+        test_items.append(createTestItem('Test Item 3', [[user_object, 254, 255, 2, '']]))
+        test_items[2].image_url = 'http://doesnotexist.onpage/image.png'
+        test_items[2].archive = True
+        test_items[2].save()
+
+        return test_items
