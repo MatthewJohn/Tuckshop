@@ -21,6 +21,7 @@ class CreditTests(TestBase):
         suite.addTest(CreditTests('test_purchase_archived_item'))
         suite.addTest(CreditTests('test_enable_custom'))
         suite.addTest(CreditTests('test_disable_custom'))
+        suite.addTest(CreditTests('test_credit_items_ordering'))
         return suite
 
     def test_list_items(self):
@@ -222,3 +223,45 @@ class CreditTests(TestBase):
         self.assertEqual(credit_page.return_vars['error'], 'Custom payment is disabled')
         self.assertTrue('Custom payment is disabled' in credit_page.request_handler.output)
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
+
+
+    def test_credit_items_ordering(self):
+        """Ensures that the items on the credit page are
+           ordered by popularity correclty."""
+        # Perform request to page
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)        
+
+        # Ensure that the initial sorting is ordered by:
+        #   1: 1 - This item has the most transactions
+        #   2: 3 - This item has the same number of transactions as 0,
+        #          but was added the soonest.
+        #   3: 0 - Has the least Transactions and is the oldest item
+        expected_order = [1, 3, 0]
+        for inventory_object in credit_page.return_vars['inventory']:
+            self.assertEqual(inventory_object, self.test_items[expected_order.pop(0)])
+
+        # Assert all items were found
+        self.assertEqual(len(expected_order), 0)
+
+        # Add new item and add multiple inventory transactions and transactions
+        # and ensure it becomes the first on the list
+        self.test_items.append(createTestItem('Most Popular', [[self.user_object, 123, 124, 3, '']],
+                                              [self.user_object, self.user_object, self.user_object]))
+
+        # Perform request to page
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)        
+
+        # Ensure that the initial sorting is ordered by:
+        #   1: 4 - This item now has the most transactions
+        #   2: 1 - This item has the second most transactions
+        #   3: 3 - This item has the same number of transactions as 0,
+        #          but was added the soonest.
+        #   4: 0 - Has the least Transactions and is the oldest item
+        expected_order = [4, 1, 3, 0]
+        for inventory_object in credit_page.return_vars['inventory']:
+            self.assertEqual(inventory_object, self.test_items[expected_order.pop(0)])
+
+        # Assert all items were found
+        self.assertEqual(len(expected_order), 0)
