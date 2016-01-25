@@ -15,7 +15,7 @@ class Credit(PageBase):
         """Set variables for displaying the credit page"""
         self.return_vars['user'] = self.getCurrentUserObject()
         self.return_vars['enable_custom'] = Config.ENABLE_CUSTOM_PAYMENT()
-        self.return_vars['inventory'] = Inventory.getAvailableItems()
+        self.return_vars['inventory'] = Inventory.getAvailableItemsByPopularity()
 
     def processPost(self):
         """Process post requests to credit page"""
