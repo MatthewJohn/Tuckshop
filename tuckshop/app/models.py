@@ -329,12 +329,24 @@ class Inventory(models.Model):
 
     @staticmethod
     def getAvailableItems():
+        """Returns the available items"""
         items = Inventory.objects.filter(archive=False)
+        # If out of stock items are not show, filter
+        # them from the query
         if not Config.SHOW_OUT_OF_STOCK_ITEMS():
             for item in items:
                 if (not item.getCurrentInventoryTransaction().getQuantityRemaining()):
                     items.remove(item)
 
+        return items
+
+    @staticmethod
+    def getAvailableItemsByPopularity():
+        """Returns available items, sorted by popularity"""
+        items = Inventory.getAvailableItems()
+        # Sort by the number of transactions
+        items = items.annotate(transaction_count=models.Count('inventorytransaction__transaction'))
+        items = items.order_by('-transaction_count')
         return items
 
     def getSalePriceString(self):
