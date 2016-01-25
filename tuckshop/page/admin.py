@@ -21,13 +21,11 @@ class Admin(PageBase):
 
     def processPost(self):
         action = self.getPostVariable(name='action', possible_values=['pay_stock', 'credit', 'debit'])
-
+        uid = self.getPostVariable(name='uid', var_type=str)
         if action == 'pay_stock':
             amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.FLOAT_MONEY,
                                                                   VariableVerificationTypes.POSITIVE],
                                           message='Amount to pay must be specified and be a valid positive amount')
-            uid = self.getPostVariable(name='uid', var_type=str)
-
             # Convert amout from pounds to pence
             amount = int(amount * 100)
             user = User.objects.get(uid=uid)
