@@ -4,20 +4,20 @@
 
                     <div class="row" id="central">
                         <div class="col-md-8 col-sm-12 col-xs-12">
-                            <h1>{{ app_name }}</h1>
-                            <div id="current-credit">
-                                <p>Welcome to the tuck shop, {{ user.display_name }}. You currently have </p>
-                                <h2 style="text-align:center">{{ user.getCreditString() }}</h2>
-                                <p>in your account. </p>
+                            <div class="col-md-8">
+                                <h1>{{ app_name }}</h1>
+                                <div id="current-credit">
+                                    <h4>Welcome to the tuck shop, {{ user.display_name }}.</h4>
+                                    <br />
+                                    <h3>You currently have {{ user.getCreditString() }} in your account.</h3>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-lg-12">
-                            <div class="col-lg-3 col-md-4 col-sm-12 col-xs-12" onkeyup="updateSearch(event)" >
+                            <div class="col-lg-3 col-md-4 col-sm-12 col-xs-12" style="margin-top: 40px; float: right;" onkeyup="updateSearch(event)" >
                                 <input id="search_input" class="form-control" placeholder="Search..."/>
                             </div>
                         </div>
-                        <div class="col-md-12">
 
+                        <div class="col-md-12">
                             {% for item in inventory %}
                             <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 search_item">
                                 <div class="thumbnail">
