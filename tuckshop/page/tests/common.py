@@ -142,8 +142,7 @@ class TestBase(unittest.TestCase):
         call_command('flush', interactive=False)
 
         # Reset local redis database
-        if RedisConnection.CONNECTION:
-            RedisConnection.CONNECTION.flushdb()
+        RedisConnection.flushdb()
 
         # Create session and get user object
         self.test_username = 'test'
@@ -157,8 +156,7 @@ class TestBase(unittest.TestCase):
     def tearDown(self):
         """Perform common teardown tasks"""
         # Reset local redis database
-        if RedisConnection.CONNECTION:
-            RedisConnection.CONNECTION.flushdb()
+        RedisConnection.flushdb()
 
     def create_test_items(self):
         """Creates several test inventory items"""
