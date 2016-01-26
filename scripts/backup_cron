@@ -1,0 +1,4 @@
+# Perform backup of tuckshop every night
+# Name after day of week
+# Copy to week of year
+0 0 * * * root mkdir /backups; dokku postgresql:dump tuckshop tuckshop > /backups/tuckshop-`date +%a`.sql; cp /backups/tuckshop-`date +%a`.sql /backups/tuckshop-week-`date +%U-%Y`.sql
