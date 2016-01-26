@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import os
+import sys
+sys.path.append('./')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tuckshop.settings")
 
@@ -8,8 +10,7 @@ import django
 django.setup()
 
 from tuckshop.app.models import *
-from tuckshop.app.functions import *
-from tuckshop.app.config import *
+from tuckshop.core.utils import *
 
 if not User.objects.filter(uid='mc'):
     user = User(uid='mc')

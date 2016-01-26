@@ -1,0 +1,13 @@
+class me(dict):
+    #def __init__(self):
+    #    self.test = 1
+    #    self.test_2 = 2
+
+    def test(self):
+        print 'hello'
+
+test = me()
+test['hello'] = 'asd'
+print ('test' in test)
+print ('hello' in test)
+test.test()
