@@ -8,4 +8,4 @@ WORKDIR /code
 ADD . /code/
 
 EXPOSE 5000
-ENTRYPOINT ["bash", "-c", "python ./manage.py syncdb && python ./tuckshopaccountant.py"]
+ENTRYPOINT ["bash", "-c", "python ./scripts/start_tests.py && python ./manage.py syncdb && python ./tuckshopaccountant.py"]
