@@ -101,8 +101,15 @@ class Stock(PageBase):
             image_url = self.getPostVariable(name='image_url', var_type=str,
                                              default='', set_default=True)
 
-            # Update item with new values
+            # Obtain item object
             item = Inventory.objects.get(pk=item_id)
+
+            # Ensure that there is not already a inventory item with the same name
+            duplicate_names = Inventory.objects.filter(name=item_name).exclude(pk=item.pk)
+            if len(duplicate_names):
+                raise TuckshopException('Item already exists with this name')
+
+            # Update item with new values
             item.name = item_name
             item.image_url = image_url
             item.save()
@@ -151,6 +158,11 @@ class Stock(PageBase):
                                              default='', set_default=True)
             archive = self.getPostVariable(name='item_archive', var_type=bool,
                                            default=False, set_default=True)
+
+            # Ensure that there is not already a inventory item with the same name
+            duplicate_names = Inventory.objects.filter(name=item_name)
+            if len(duplicate_names):
+                raise TuckshopException('Item already exists with this name')
 
             # Create new item
             item = Inventory(name=item_name, image_url=image_url, archive=archive)
