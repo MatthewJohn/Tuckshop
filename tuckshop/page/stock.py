@@ -19,7 +19,7 @@ class Stock(PageBase):
         self.return_vars['active_items'] = Inventory.objects.filter(archive=False)
         self.return_vars['latest_transaction_data'] = json.dumps(
             self.getLatestTransactionData(active_items=self.return_vars['active_items'])
-        )
+        ).replace("'", r"\'")
 
     def getLatestTransactionData(self, active_items):
         """Obtain the latest inventory transactions for recent transaction drop-down"""
