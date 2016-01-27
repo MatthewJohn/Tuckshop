@@ -22,6 +22,7 @@ class CreditTests(TestBase):
         suite.addTest(CreditTests('test_enable_custom'))
         suite.addTest(CreditTests('test_disable_custom'))
         suite.addTest(CreditTests('test_credit_items_ordering'))
+        suite.addTest(CreditTests('test_purchase_price_change'))
         return suite
 
     def test_list_items(self):
@@ -72,7 +73,8 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[1].pk
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': self.test_items[1].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
 
@@ -89,7 +91,8 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[1].pk
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': self.test_items[1].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
 
@@ -106,7 +109,8 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[1].pk
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': 12
                                     })
         credit_page.processRequest(post_request=True)
 
@@ -122,7 +126,8 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': 5
+                                        'item_id': 5,
+                                        'sale_price': 50
                                     })
         credit_page.processRequest(post_request=True)
 
@@ -138,7 +143,8 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[2].pk
+                                        'item_id': self.test_items[2].pk,
+                                        'sale_price': self.test_items[2].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
 
@@ -266,3 +272,31 @@ class CreditTests(TestBase):
 
         # Assert all items were found
         self.assertEqual(len(expected_order), 0)
+
+    def test_purchase_price_change(self):
+        """Attempts to purchase an item where the price
+           displayed on the page differs from the price
+           that will be charged"""
+        original_quantity = self.test_items[1].getQuantityRemaining()
+
+        # Purchase an item
+        credit_page = getPageObject(Credit, path='', unittest=self,
+                                    headers={'Cookie': self.cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': 98
+                                    })
+        credit_page.processRequest(post_request=True)
+
+        # Ensure that user's account has not been debitted.
+        self.assertEqual(self.user_object.getCurrentCredit(), -124)
+
+        # Ensure error is displayed to user 
+        self.assertEqual(credit_page.return_vars['error'],
+                         ('Purchase cancelled - '
+                          'Price has changed from 98p to &pound;1.24'))
+
+        # Ensure item quantity has not changed
+        self.test_items[2].refresh_from_db()
+        self.assertEqual(self.test_items[2].getQuantityRemaining(), original_quantity)

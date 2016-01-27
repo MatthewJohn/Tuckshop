@@ -31,13 +31,17 @@ class Credit(PageBase):
             if amount:
                 description = self.getPostVariable(name='description', var_type=str, default=None,
                                                    set_default=True)
+
                 if Config.ENABLE_CUSTOM_PAYMENT():
                     user_object.removeCredit(amount=amount, description=description)
                 else:
                     raise TuckshopException('Custom payment is disabled')
             elif item_id:
+                original_price = self.getPostVariable(name='sale_price', var_type=int,
+                                                      special=[VariableVerificationTypes.NON_NEGATIVE])
                 inventory_object = Inventory.objects.get(pk=item_id)
-                user_object.removeCredit(inventory=inventory_object)
+
+                user_object.removeCredit(inventory=inventory_object, verify_price=original_price)
             elif Config.ENABLE_CUSTOM_PAYMENT():
                 raise TuckshopException('Amount must be specified')
             else:
