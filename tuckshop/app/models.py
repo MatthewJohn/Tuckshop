@@ -192,7 +192,8 @@ class User(models.Model):
                             current_credit)
         return current_credit
 
-    def removeCredit(self, amount=None, inventory=None, description=None):
+    def removeCredit(self, amount=None, inventory=None, description=None,
+                     verify_price=None):
         if (inventory and inventory.getQuantityRemaining() <= 0):
             raise TuckshopException('There are no items in stock')
 
@@ -211,6 +212,13 @@ class User(models.Model):
 
             if (not amount):
                 amount = inventory_transaction.sale_price
+
+                # If a verification price has been supplied,
+                # ensure the price being paid for the item matches.
+                if verify_price is not None and amount != verify_price:
+                    raise TuckshopException('Purchase cancelled - Price has changed from %s to %s' %
+                                            (getMoneyString(verify_price, include_sign=False),
+                                             getMoneyString(amount, include_sign=False)))
 
         elif not amount:
             raise TuckshopException('Must pass amount or inventory')
