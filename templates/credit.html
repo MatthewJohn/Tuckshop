@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 {% block content %}
                     <script src="/js/credit-search.js"></script>
+                    <script src="/js/bootstrap-dialog.js"></script>
+                    <script src="/js/credit-dialog.js"></script>
 
                     <div class="row" id="central">
                         <div class="col-md-8 col-sm-12 col-xs-12">
@@ -23,9 +25,11 @@
                                 <div class="thumbnail">
                                     <img src="{{ item.getImageUrl() }}" alt="{{ item.name }}">
                                     <div class="caption">
-                                        <form id="purchase-{{ item.id }}" action="/credit" method="post">
+                                        <form id="purchase-{{ item.id }}" action="/credit" method="post" onsubmit="return purchaseItem(event);">
                                             <input type="hidden" name="action" value="pay" />
                                             <input type="hidden" name="item_id" value="{{ item.id }}" />
+                                            <input class="sale_price_string" type="hidden" name="sale_price_string" value="{{ item.getSalePriceString() }}" />
+                                            <input type="hidden" name="sale_price" value="{{ item.getSalePrice() }}" />
                                             <h3 class="item_name">{{ item.name }}</h3>
                                             <p><input type="submit" class="btn btn-primary" value="{{ item.getSalePriceString() }}" role="button" {% if (not item.getQuantityRemaining()) %}disabled{% endif %}/></p>
                                             {% if (not item.getQuantityRemaining()) %}Out of Stock{% endif %}
@@ -48,10 +52,10 @@
                                 <div class="thumbnail">
                                     <div class="caption">
                                         <h3 class='custom-amount'>Custom Amount</h3>
-                                        <form action="/credit" method="post">
+                                        <form action="/credit" id="purchase-custom" method="post">
                                             <input type="hidden" name="action" value="pay" />
                                             <div class="input-group">
-                                                <input type="text" class="form-control" id="money" name="amount" placeholder="30">
+                                                <input type="text" class="form-control" name="amount" placeholder="30">
                                                 <div class="input-group-addon">p</div>
                                             </div>
                                             <input type="text" class="form-control" id="description" name="description" placeholder="Description..." />
