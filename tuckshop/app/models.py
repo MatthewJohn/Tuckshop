@@ -342,6 +342,10 @@ class Inventory(models.Model):
 
         return items
 
+    def getTransactionCount(self):
+        """Returns the number of transaction for the item"""
+        return len(Transaction.objects.filter(inventory_transaction__inventory=self))
+
     @staticmethod
     def getAvailableItemsByPopularity():
         """Returns available items, sorted by popularity"""
@@ -350,8 +354,19 @@ class Inventory(models.Model):
         # Anotate the results with the number of transactions
         items = items.annotate(transaction_count=models.Count('inventorytransaction__transaction'))
 
-        # Sort by the number of transactions, then by timestamp
-        items = items.order_by('-transaction_count', '-timestamp')
+        # Convert query set to list, so that they can be sorted
+        items = [item for item in items]
+
+        # Sort by:
+        # 1. Whether the item has ever had any stock
+        # 2. Whether the item is in stock
+        # 3. The number of transactions (popularity)
+        # 4. Timestamp
+        items.sort(key=lambda x: (bool(x.getInventoryTransactions(only_active=False)),
+                                  bool(x.getQuantityRemaining()),
+                                  x.getTransactionCount(),
+                                  x.timestamp),
+                   reverse=True)
 
         # Return the ordered results
         return items

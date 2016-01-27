@@ -238,6 +238,7 @@ class CreditTests(TestBase):
         #          but was added the soonest.
         #   3: 0 - Has the least Transactions and is the oldest item
         expected_order = [1, 3, 0]
+
         for inventory_object in credit_page.return_vars['inventory']:
             self.assertEqual(inventory_object, self.test_items[expected_order.pop(0)])
 
@@ -247,7 +248,7 @@ class CreditTests(TestBase):
         # Add new item and add multiple inventory transactions and transactions
         # and ensure it becomes the first on the list
         self.test_items.append(createTestItem('Most Popular', [[self.user_object, 123, 124, 3, '']],
-                                              [self.user_object, self.user_object, self.user_object]))
+                                              [self.user_object, self.user_object]))
 
         # Perform request to page
         credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
