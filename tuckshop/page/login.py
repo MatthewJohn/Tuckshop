@@ -38,7 +38,6 @@ class Login(PageBase):
 
             if username and password and login(username, password):
                 self.setSessionVar('username', username)
-                self.setSessionVar('password', password)
                 self.return_vars['auth_error'] = None
                 redirect_url = '/%s' % '/'.join(Login.getUrlParts(self.request_handler)[2:])
                 self.redirect = Redirect(self.request_handler, redirect_url)
