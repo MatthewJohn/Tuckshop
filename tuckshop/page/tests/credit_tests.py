@@ -23,6 +23,7 @@ class CreditTests(TestBase):
         suite.addTest(CreditTests('test_disable_custom'))
         suite.addTest(CreditTests('test_credit_items_ordering'))
         suite.addTest(CreditTests('test_purchase_price_change'))
+        suite.addTest(CreditTests('test_invalid_amount_values'))
         return suite
 
     def test_list_items(self):
@@ -300,3 +301,20 @@ class CreditTests(TestBase):
         # Ensure item quantity has not changed
         self.test_items[2].refresh_from_db()
         self.assertEqual(self.test_items[2].getQuantityRemaining(), original_quantity)
+
+    def test_invalid_amount_values(self):
+        """Attempts to perform a custom payment
+           using invalid amounts"""
+        invalid_values = [0, -12, 'a', '', '12p', '&pound;1', '.12', 0.1, 3.1, -0.1, -1, '@']
+
+        current_transactions = len(Transaction.objects.all())
+        for value in invalid_values:
+            # Attempt to make a custom payment using the credit page
+            credit_page = getPageObject(Credit, path='', unittest=self,
+                                        headers={'Cookie': self.cookie},
+                                        post_variables={
+                                            'action': 'pay',
+                                            'amount': invalid_values,
+                                            'description': ''
+                                        })
+            self.assertEqual(current_transactions, len(Transaction.objects.all()))
