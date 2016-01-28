@@ -276,7 +276,7 @@ class PageBase(object):
             page_range = range(1, total_pages + 1)
         else:
             pages_up_down = int(math.ceil((Config.TOTAL_PAGE_DISPLAY() - 1) / 2))
-            page_range = range(current_page - pages_up_down, current_page + pages_up_downs + 1)
+            page_range = range(current_page - pages_up_down, current_page + pages_up_down + 1)
 
         page_data = []
         for page_numer in page_range:
