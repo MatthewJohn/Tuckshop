@@ -276,7 +276,21 @@ class PageBase(object):
             page_range = range(1, total_pages + 1)
         else:
             pages_up_down = int(math.ceil((Config.TOTAL_PAGE_DISPLAY() - 1) / 2))
-            page_range = range(current_page - pages_up_down, current_page + pages_up_down + 1)
+
+            # Determine if the lower limit is based on the minimum page (1)
+            # or on the current  page - the TOTAL_PAGE_DISPLAY
+            if (current_page - pages_up_down) < 1:
+                lower_page = 1
+            else:
+                lower_page = (current_page - pages_up_down)
+
+            # Determine if upper limit is based on the total pages
+            # or on the current page + the TOTAL_PAGE_DISPLAY
+            if (current_page + pages_up_down) > total_pages:
+                upper_page = (total_pages + 1)
+            else:
+                upper_page = (current_page + pages_up_down + 1)
+            page_range = range(lower_page, upper_page)
 
         page_data = []
         for page_numer in page_range:
