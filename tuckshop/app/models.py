@@ -61,7 +61,7 @@ class User(models.Model):
         """Returns the stock payments objects for credit"""
         return StockPayment.objects.filter(user=self, inventory_transaction__isnull=True)
 
-    def payForStock(self, author_user, amount, type):
+    def payForStock(self, author_user, amount):
         # Ensure that amount is a positive integer (or 0)
         if amount < 0:
             raise Exception('Amount must be a positive amount')
