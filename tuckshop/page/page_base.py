@@ -324,7 +324,8 @@ class PageBase(object):
         if not sid or clear_cookie:
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
-            cookie['sid']['expires'] = 24 * 60 * 60
+            expires = (time.time() + 24 * 3600)
+            cookie['sid']['expires'] = time.strftime("%a, %d-%b-%Y %T GMT", time.gmtime(expires))
             self.headers['Set-Cookie'] = cookie.output()
             RedisConnection.hset('session_' + sid, 'session_id', sid)
 
