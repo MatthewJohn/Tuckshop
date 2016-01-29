@@ -314,14 +314,15 @@ class PageBase(object):
         return self.session_id
 
     def getSession(self, clear_cookie=False):
-        cookie = Cookie.SimpleCookie()
         sid = None
         if ('Cookie' in self.request_handler.headers):
+            cookie = Cookie.SimpleCookie()
             cookie.load(self.request_handler.headers.getheader('Cookie'))
             if ('sid' in cookie and cookie['sid']):
                 sid = cookie['sid'].value
 
         if not sid or clear_cookie:
+            cookie = Cookie.SimpleCookie()
             sid = sha.new(repr(time.time())).hexdigest()
             cookie['sid'] = sid
             expires = (time.time() + 14 * 24 * 3600)
