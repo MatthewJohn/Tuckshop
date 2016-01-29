@@ -327,7 +327,7 @@ class PageBase(object):
             cookie['sid'] = sid
             expires = (time.time() + 14 * 24 * 3600)
             cookie['sid']['expires'] = time.strftime("%a, %d-%b-%Y %T GMT", time.gmtime(expires))
-            sookie['sid']['path'] = '/'
+            cookie['sid']['path'] = '/'
             self.headers['Set-Cookie'] = cookie.output()
             RedisConnection.hset('session_' + sid, 'session_id', sid)
 
