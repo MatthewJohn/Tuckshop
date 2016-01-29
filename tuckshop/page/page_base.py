@@ -72,7 +72,7 @@ class PageBase(object):
         self.headers = {}
         self.response_code = 200
         self.session_id = None
-        self.session_id = self.getSessionId()
+        self.getSessionId()
 
     @property
     def name(self):
@@ -323,13 +323,14 @@ class PageBase(object):
 
         if not sid or clear_cookie:
             cookie = Cookie.SimpleCookie()
-            sid = sha.new(repr(time.time())).hexdigest()
+            sid = str(sha.new(repr(time.time())).hexdigest())
             cookie['sid'] = sid
+            cookie['sid']['path'] = '/'
             expires = (time.time() + 14 * 24 * 3600)
             cookie['sid']['expires'] = time.strftime("%a, %d-%b-%Y %T GMT", time.gmtime(expires))
-            print cookie.output()
-            self.headers['Set-Cookie'] = cookie.output()
-            RedisConnection.hset('session_' + sid, 'session_id', sid)
+            cookie_output = cookie.output().split(': ')
+            RedisConnection.hset('session_' + str(sid), 'exists', '1')
+            self.headers[cookie_output[0]] = cookie_output[1]
 
         return sid
 
