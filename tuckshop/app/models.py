@@ -1,4 +1,5 @@
 from django.db import models
+from enum import Enum
 
 from tuckshop.core.config import Config
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -60,7 +61,7 @@ class User(models.Model):
         """Returns the stock payments objects for credit"""
         return StockPayment.objects.filter(user=self, inventory_transaction__isnull=True)
 
-    def payForStock(self, author_user, amount):
+    def payForStock(self, author_user, amount, type):
         # Ensure that amount is a positive integer (or 0)
         if amount < 0:
             raise Exception('Amount must be a positive amount')
@@ -183,7 +184,8 @@ class User(models.Model):
         if (amount < 0):
             raise Exception('Cannot use negative number')
         current_credit = self.getCurrentCredit()
-        transaction = Transaction(user=self, amount=amount, debit=False, description=description)
+        transaction = Transaction(user=self, amount=amount, debit=False, description=description,
+                                  payment_type=Transaction.TransactionType.ADMIN_CHANGE.value)
         transaction.save()
 
         # Update credit cache
@@ -192,7 +194,8 @@ class User(models.Model):
                             current_credit)
         return current_credit
 
-    def removeCredit(self, amount=None, inventory=None, description=None):
+    def removeCredit(self, amount=None, inventory=None,
+                     description=None, admin_payment=False):
         if (inventory and inventory.getQuantityRemaining() <= 0):
             raise TuckshopException('There are no items in stock')
 
@@ -202,7 +205,13 @@ class User(models.Model):
         current_credit = self.getCurrentCredit()
         transaction = Transaction(user=self, debit=True)
 
+        if admin_payment:
+            payment_type = Transaction.TransactionType.ADMIN_CHANGE.value
+        else:
+            payment_type = Transaction.TransactionType.CUSTOM_PAYMENT.value
+
         if (inventory):
+            payment_type = Transaction.TransactionType.ITEM_PURCHASE.value
             inventory_transaction = inventory.getCurrentInventoryTransaction()
             if inventory_transaction is None:
                 raise TuckshopException('No inventory transaction available for this item')
@@ -219,6 +228,7 @@ class User(models.Model):
         if (amount < 0):
             raise TuckshopException('Cannot use negative number')
 
+        transaction.payment_type = payment_type
         transaction.amount = amount
         transaction.description = description
         transaction.save()
@@ -498,8 +508,17 @@ class Transaction(models.Model):
     amount = models.IntegerField()
     debit = models.BooleanField(default=True)
     inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
+    payment_type = models.IntegerField()
     description = models.CharField(max_length=255, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+
+    class TransactionType(Enum):
+        """Types of payment"""
+        ITEM_PURCHASE = 1
+        CUSTOM_PAYMENT = 2
+        ADMIN_CHANGE = 3
+
 
     class Meta:
         ordering = ['-timestamp']

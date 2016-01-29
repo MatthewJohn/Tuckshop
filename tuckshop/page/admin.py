@@ -52,6 +52,6 @@ class Admin(PageBase):
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
 
             user = User.objects.get(uid=uid)
-            user.removeCredit(amount, description=description)
+            user.removeCredit(amount, description=description, admin_payment=True)
             self.return_vars['info'] = 'Removed %s from %s' % (getMoneyString(amount, include_sign=False),
                                                                user.uid)
