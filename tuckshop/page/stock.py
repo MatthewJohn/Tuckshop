@@ -63,15 +63,14 @@ class Stock(PageBase):
                 cost_total = self.getPostVariable(name='cost_total', var_type=float,
                                                   special=[VariableVerificationTypes.FLOAT_MONEY,
                                                            VariableVerificationTypes.POSITIVE],
-                                                  message='Total cost must be a valid amount (e.g. 2.12 or 2)')
+                                                  message='Total cost must be a valid amount in pounds (e.g. 2.12 or 2)')
                 cost = int(cost_total * 100)
 
             elif cost_type == 'each':
-                cost_each = self.getPostVariable(name='cost_each', var_type=float,
-                                                 special=[VariableVerificationTypes.FLOAT_MONEY,
-                                                          VariableVerificationTypes.POSITIVE],
-                                                 message='Cost price (each) must be a valid amount (e.g. 2.12 or 2)')
-                cost = (int(cost_each * 100) * quantity)
+                cost_each = self.getPostVariable(name='cost_each', var_type=int,
+                                                 special=[VariableVerificationTypes.POSITIVE],
+                                                 message='Cost price (each) must be a valid amount in pence (e.g. 30 or 45)')
+                cost = (int(cost_each) * quantity)
 
             sale_price = self.getPostVariable(name='sale_price', var_type=int,
                                               special=[VariableVerificationTypes.POSITIVE],
