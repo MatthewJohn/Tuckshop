@@ -33,8 +33,14 @@ class StaticFile(PageBase):
         else:
             raise TuckshopException('Filename is not within base directory')
 
+    def getFilename(self):
+        if StaticFile.getUrlParts(self.request_handler)[2]:
+            return StaticFile.getUrlParts(self.request_handler)[2]
+        else:
+            return None
+
     def processPage(self):
-        file_name = StaticFile.getUrlParts(self.request_handler)[2] if StaticFile.getUrlParts(self.request_handler)[2] else None
+        file_name = self.getFilename()
         self.file_contents = None
 
         if file_name:
@@ -74,3 +80,10 @@ class JS(StaticFile):
 
 class Font(StaticFile):
     BASE_DIR = 'fonts'
+
+class Favicon(StaticFile):
+    BASE_DIR = 'favicon'
+    CONTENT_TYPE = 'image/x-icon'
+
+    def getFilename(self):
+        return 'favicon.ico'

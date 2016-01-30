@@ -6,7 +6,7 @@ from tuckshop.page.login import Login
 from tuckshop.page.logout import Logout
 from tuckshop.page.credit import Credit
 from tuckshop.page.redirect import Redirect
-from tuckshop.page.static_file import JS, CSS, Font
+from tuckshop.page.static_file import JS, CSS, Font, Favicon
 from tuckshop.page.history import History
 from tuckshop.page.stock_history import StockHistory
 from tuckshop.page.stock import Stock
@@ -44,6 +44,8 @@ class Factory(object):
             page_object = Admin(request_handler)
         elif name == 'float':
             page_object = Float(request_handler)
+        elif name == 'favicon.ico':
+            page_object = Favicon(request_handler)
         else:
             page_object = NotFound(request_handler)
 
