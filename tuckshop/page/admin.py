@@ -22,12 +22,13 @@ class Admin(PageBase):
     def processPost(self):
         action = self.getPostVariable(name='action', possible_values=['pay_stock', 'credit', 'debit'])
         uid = self.getPostVariable(name='uid', var_type=str)
+        amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.FLOAT_MONEY,
+                                                              VariableVerificationTypes.POSITIVE],
+                                      message='Amount must be specified and be a valid positive amount in pounds')
+        # Convert amout from pounds to pence
+        amount = int(amount * 100)
+
         if action == 'pay_stock':
-            amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.FLOAT_MONEY,
-                                                                  VariableVerificationTypes.POSITIVE],
-                                          message='Amount to pay must be specified and be a valid positive amount')
-            # Convert amout from pounds to pence
-            amount = int(amount * 100)
             user = User.objects.get(uid=uid)
             amount, semi_paid_transaction = user.payForStock(author_user=self.getCurrentUserObject(),
                                                              amount=amount)
@@ -38,8 +39,6 @@ class Admin(PageBase):
                                                (getMoneyString(amount, include_sign=False), uid))
 
         elif action == 'credit':
-            amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.POSITIVE], var_type=int,
-                                          message="Amount must be a positive amount in pence")
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
 
             user = User.objects.get(uid=uid)
@@ -47,8 +46,6 @@ class Admin(PageBase):
             self.return_vars['info'] = 'Added %s to %s' % (getMoneyString(amount, include_sign=False),
                                                            user.uid)
         elif action == 'debit':
-            amount = self.getPostVariable(name='amount', special=[VariableVerificationTypes.POSITIVE], var_type=int,
-                                          message="Amount must be a positive amount in pence")
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
 
             user = User.objects.get(uid=uid)
