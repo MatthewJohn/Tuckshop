@@ -31,6 +31,10 @@
                         }
                     }
 
+                    $(document).ready(function() {
+                        update_common({{ active_items[0].id }});
+                    });
+
                     function update_fields(common_data_string)
                     {
                         var common_data = JSON.parse(common_data_string);

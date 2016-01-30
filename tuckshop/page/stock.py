@@ -16,7 +16,7 @@ class Stock(PageBase):
     def processPage(self):
         """Obtains variables required to display the stock page"""
         self.return_vars['inventory_items'] = Inventory.objects.all().order_by('archive', 'name')
-        self.return_vars['active_items'] = Inventory.objects.filter(archive=False)
+        self.return_vars['active_items'] = self.return_vars['inventory_items'].filter(archive=False)
         self.return_vars['latest_transaction_data'] = json.dumps(
             self.getLatestTransactionData(active_items=self.return_vars['active_items'])
         ).replace("'", r"\'")
