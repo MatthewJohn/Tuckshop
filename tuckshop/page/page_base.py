@@ -110,6 +110,11 @@ class PageBase(object):
 
         # Obtain the value from post data
         value = self.post_vars[name]
+        if var_type is str:
+            # If the var_type is string, convert unicode characters
+            value = str(self.post_vars[name].decode('iso-8859-1').encode('utf8'))
+        else:
+            value = self.post_vars[name]
 
         # If a type has not been specified and a 'special' case has been,
         # set the var_type to an appropriate value.
@@ -224,7 +229,7 @@ class PageBase(object):
         env = Environment()
         env.loader = FileSystemLoader('./templates/')
         template = env.get_template('%s.html' % self.template)
-        self.request_handler.wfile.write(template.render(**self.return_vars))
+        self.request_handler.wfile.write(unicode(template.render(**self.return_vars)).encode('latin1'))
 
     def attemptFunction(self, fun):
         try:
