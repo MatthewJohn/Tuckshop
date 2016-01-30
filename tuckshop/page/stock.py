@@ -29,13 +29,14 @@ class Stock(PageBase):
             transactions = InventoryTransaction.objects.filter(inventory=inventory).order_by('-timestamp')
             duplicate_info_list = []
             for transaction in transactions:
-                duplicate_info = '%s_%s_%s_%s' % (transaction.quantity, transaction.sale_price,
-                                                  transaction.cost, transaction.description)
-                if duplicate_info not in duplicate_info_list:
-                    duplicate_info_list.append(duplicate_info)
-                    latest_data[inventory.id].append([transaction.id, transaction.quantity,
-                                                      float(transaction.cost) / 100,
-                                                      transaction.sale_price, transaction.description])
+                if transaction.description:
+                    duplicate_info = '%s_%s_%s_%s' % (transaction.quantity, transaction.sale_price,
+                                                      transaction.cost, transaction.description)
+                    if duplicate_info not in duplicate_info_list:
+                        duplicate_info_list.append(duplicate_info)
+                        latest_data[inventory.id].append([transaction.id, transaction.quantity,
+                                                          float(transaction.cost) / 100,
+                                                          transaction.sale_price, transaction.description])
             if (len(latest_data[inventory.id]) == 5):
                 break
 
