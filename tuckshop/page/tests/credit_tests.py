@@ -182,7 +182,7 @@ class CreditTests(TestBase):
         self.assertEqual(credit_page.return_vars['enable_custom'], True)
 
         # Ensure that the custom box is present on the page
-        self.assertTrue('<h3 class=\'custom-amount\'>Custom Payment/Donation</h3>' in
+        self.assertTrue('<h3 class=\'custom-amount\'>Custom Payment/ Donation</h3>' in
                         credit_page.request_handler.output)
 
         # Attempt to make a custom payment using the credit page
@@ -213,7 +213,7 @@ class CreditTests(TestBase):
         self.assertEqual(credit_page.return_vars['enable_custom'], False)
 
         # Ensure that the custom box is not present on the page
-        self.assertFalse('<h3 class=\'custom-amount\'>Custom Payment/Donation</h3>' in
+        self.assertFalse('<h3 class=\'custom-amount\'>Custom Payment/ Donation</h3>' in
                          credit_page.request_handler.output)
 
         # Attempt to make a custom payment using the credit page
