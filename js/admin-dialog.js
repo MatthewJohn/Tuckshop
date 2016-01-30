@@ -32,12 +32,12 @@ function confirmCreditChange(uid, amount, description, credit)
 {
     if (credit)
     {
-        message = 'Are you sure that you wish to add ' + amount + 'p to the account of ' + uid;
+        message = 'Are you sure that you wish to add \u00A3' + amount + ' to the account of ' + uid;
         document.getElementById('action_' + uid).value = 'credit';
     }
     else
     {
-        message = 'Are you sure that you wish to remove ' + amount + 'p from the account of ' + uid;
+        message = 'Are you sure that you wish to remove \u00A3' + amount + ' from the account of ' + uid;
         document.getElementById('action_' + uid).value = 'debit';
     }
     BootstrapDialog.show({
