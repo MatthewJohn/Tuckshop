@@ -413,7 +413,7 @@ class Inventory(models.Model):
 
         if (len(inventory_transaction_list) == 0):
             if (self.getLatestSalePrice()):
-                return self.getLatestSalePrice()
+                return getMoneyString(self.getLatestSalePrice(), include_sign=False)
             else:
                 return 'N/A'
         elif (len(inventory_transaction_list) == 1):
