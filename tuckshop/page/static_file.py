@@ -1,3 +1,6 @@
+import os
+
+from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.page.page_base import PageBase
 from tuckshop.page.not_found import NotFound
 
@@ -8,6 +11,7 @@ class StaticFile(PageBase):
     ADMIN_PAGE = False
     CONTENT_TYPE = None
     NAME = None
+    BASE_DIR = 'fake'
 
     @property
     def base_dir(self):
@@ -17,13 +21,28 @@ class StaticFile(PageBase):
         super(StaticFile, self).__init__(*args, **kwargs)
         self.not_found_object = False
 
+    def checkPath(self, filename):
+        """Ensures that the file requested isn't outside
+           of the specified BASE_DIR"""
+        base_abs = os.path.realpath(self.base_dir)
+        requested_abs = os.path.realpath(os.path.join(self.base_dir, filename))
+        print base_abs
+        print requested_abs
+        if requested_abs.startswith(base_abs):
+            return True
+        else:
+            raise TuckshopException('Filename is not within base directory')
+
     def processPage(self):
         file_name = StaticFile.getUrlParts(self.request_handler)[2] if StaticFile.getUrlParts(self.request_handler)[2] else None
-        self.file_content = None
+        self.file_contents = None
+
         if file_name:
-            mime_type, self.file_contents = self.getFile(self, self.base_dir, file_name)
-            if not self.base_dir:
-                self.CONTENT_TYPE = mime_type
+            # Ensure file is within the base directory
+            if self.checkPath(file_name):
+                mime_type, self.file_contents = self.getFile(self, self.base_dir, file_name)
+                if not self.CONTENT_TYPE:
+                    self.CONTENT_TYPE = mime_type
 
         # If file name was not passed or file does not exist,
         # return a 404
