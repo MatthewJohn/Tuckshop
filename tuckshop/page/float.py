@@ -20,11 +20,19 @@ class Float(PageBase):
             if inventory_transaction.inventory not in self.return_vars['active_inventorys']:
                 self.return_vars['active_inventorys'].append(inventory_transaction.inventory)
 
+        stock_value = self.getStockValue()
+        unpaid_stock = self.getUnpaidStock()
+
         float_amount, credit_balance = self.getCurrentFloat()
+
+        # Calculate what float would be if life were perfect
+        float_superficial = float_amount - credit_balance - unpaid_stock + stock_value
+
         self.return_vars['float'] = getMoneyString(float_amount, include_sign=True)
         self.return_vars['credit_balance'] = getMoneyString(credit_balance, include_sign=True, colour_switch=True)
-        self.return_vars['stock_value'] = getMoneyString(self.getStockValue(), include_sign=True)
-        self.return_vars['stock_owed'] = getMoneyString(self.getUnpaidStock(), include_sign=True, colour_switch=True)
+        self.return_vars['stock_value'] = getMoneyString(stock_value, include_sign=True)
+        self.return_vars['stock_owed'] = getMoneyString(unpaid_stock, include_sign=True, colour_switch=True)
+        self.return_vars['float_superficial'] = getMoneyString(float_superficial, include_sign=True)
 
     def processPost(self):
         """There are no post requests handled by the float page"""
