@@ -29,8 +29,8 @@ class Credit(PageBase):
         if action == 'pay':
             user_object = self.getCurrentUserObject()
             if amount:
-                description = self.getPostVariable(name='description', var_type=str, default=None,
-                                                   set_default=True)
+                description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
+                                                   message='Description must be less than 255 characters')
 
                 if Config.ENABLE_CUSTOM_PAYMENT():
                     user_object.removeCredit(amount=amount, description=description)
