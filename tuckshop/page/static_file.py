@@ -26,8 +26,6 @@ class StaticFile(PageBase):
            of the specified BASE_DIR"""
         base_abs = os.path.realpath(self.base_dir)
         requested_abs = os.path.realpath(os.path.join(self.base_dir, filename))
-        print base_abs
-        print requested_abs
         if requested_abs.startswith(base_abs):
             return True
         else:
