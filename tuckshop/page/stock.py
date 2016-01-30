@@ -56,8 +56,8 @@ class Stock(PageBase):
             inventory_object = Inventory.objects.get(pk=inventory_id)
 
 
-            description = self.getPostVariable(name='description', var_type=str, default=None,
-                                               set_default=True)
+            description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
+                                               message='Description must be less than 255 characters')
             cost_type = self.getPostVariable(name='cost_type', var_type=str,
                                              possible_values=['total', 'each'])
             if cost_type == 'total':
@@ -99,7 +99,8 @@ class Stock(PageBase):
                                              special=[VariableVerificationTypes.NOT_EMPTY],
                                              message='Item must have a name')
             image_url = self.getPostVariable(name='image_url', var_type=str,
-                                             default='', set_default=True)
+                                             default='', set_default=True,
+                                             message='Image must be a valid URL less than 255 characters')
 
             # Obtain item object
             item = Inventory.objects.get(pk=item_id)
@@ -153,9 +154,10 @@ class Stock(PageBase):
             # Obtain values for new item from POST variables
             item_name = self.getPostVariable(name='item_name', var_type=str,
                                              special=[VariableVerificationTypes.NOT_EMPTY],
-                                             message='Item must have a name')
+                                             message='Item must have a name, less than 255 characters')
             image_url = self.getPostVariable(name='image_url', var_type=str,
-                                             default='', set_default=True)
+                                             default='', set_default=True,
+                                             message='Image URL must a valid URL less than 255 characters')
             archive = self.getPostVariable(name='item_archive', var_type=bool,
                                            default=False, set_default=True)
 

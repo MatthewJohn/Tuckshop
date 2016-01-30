@@ -39,14 +39,16 @@ class Admin(PageBase):
                                                (getMoneyString(amount, include_sign=False), uid))
 
         elif action == 'credit':
-            description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
+            description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
+                                               message='Description must be less than 255 characters')
 
             user = User.objects.get(uid=uid)
             user.addCredit(amount, description=description)
             self.return_vars['info'] = 'Added %s to %s' % (getMoneyString(amount, include_sign=False),
                                                            user.uid)
         elif action == 'debit':
-            description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True)
+            description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
+                                               message='Description must be less than 255 characters')
 
             user = User.objects.get(uid=uid)
             user.removeCredit(amount, description=description, admin_payment=True)
