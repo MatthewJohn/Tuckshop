@@ -96,10 +96,15 @@ class PageBase(object):
 
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
-                        special=[], message=None):
+                        special=[], message=None, max_length=None):
         """Performs various checks of post vars and returns the value if checks pass"""
         message = message if message else "%s does not conform" % name
         message = "Error (%%s): %s" % message
+
+        # If max-length has not been specified and the variable is a string,
+        # default to limit to 255 characters
+        if var_type is str:
+            max_length = 255
 
         # Check if variable is in post data
         if name not in self.post_vars:
@@ -170,6 +175,10 @@ class PageBase(object):
 
         if VariableVerificationTypes.NOT_EMPTY in special and value == '':
             raise InvalidPostVariable(message % 'PD0110')
+
+        if max_length:
+            if len(value) > max_length:
+                raise TuckshopException(message % 'PDO0111')
 
         return value
 
