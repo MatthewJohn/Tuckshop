@@ -624,3 +624,12 @@ class StockPayment(models.Model):
 class Token(models.Model):
     user = models.ForeignKey(User)
     token_value = models.CharField(max_length=100)
+
+class Change(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    object_type = models.CharField(max_length=255)
+    object_id = models.IntegerField()
+    user = models.ForeignKey(User)
+    changed_field = models.CharField(max_length=255)
+    previous_value = models.CharField(max_length=255)
+    new_value = models.CharField(max_length=255)
