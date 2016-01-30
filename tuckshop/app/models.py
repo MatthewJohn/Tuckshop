@@ -509,6 +509,35 @@ class InventoryTransaction(models.Model):
     def getCostRemainingString(self):
         return getMoneyString(self.getRemainingCost(), include_sign=False)
 
+    def updateSalePrice(self, new_sale_price):
+        if self.getQuantitySold():
+            # If any of the items have been sold, create a new transaction for the
+            # items remaining
+            self.quantity -= self.getQuantityRemaining()
+            self.save()
+
+            # Create a new inventory transaction for the new item
+            new_inventory_transaction = InventoryTransaction.objects.get(pk=self.pk)
+            new_inventory_transaction.pk = None
+            # Update the quantity to reflect the quantity of items being
+            # updated
+            new_inventory_transaction.quantity = self.getQuantityRemaining()
+            new_inventory_transaction.sale_price = new_sale_price
+
+            # Set the cost to 0, as the cost is captured in the original
+            # inventory transaction
+            new_inventory_transaction.cost = 0
+            new_inventory_transaction.save()
+
+            # Update the timestamp of the new inventory transaction, as it will
+            # default to the current time when created
+            new_inventory_transaction.timestamp = self.timestamp
+            new_inventory_transaction.save()
+        else:
+            # Else Simply update the transaction
+            self.sale_price = new_sale_price
+            self.save()
+
 
 class Transaction(models.Model):
     user = models.ForeignKey(User)
