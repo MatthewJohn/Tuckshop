@@ -2,7 +2,7 @@
 import json
 
 from tuckshop.page.page_base import PageBase, VariableVerificationTypes
-from tuckshop.app.models import Inventory, Transaction, InventoryTransaction
+from tuckshop.app.models import Inventory, Transaction, InventoryTransaction, Change
 from tuckshop.core.tuckshop_exception import TuckshopException
 
 class Stock(PageBase):
@@ -110,12 +110,36 @@ class Stock(PageBase):
             if len(duplicate_names):
                 raise TuckshopException('Item already exists with this name')
 
-            # Update item with new values
-            item.name = item_name
-            item.image_url = image_url
-            item.save()
+            # Detect object changes and record changes
+            item_updated = False
+            if item.name != item_name:
+                # Record change in change table
+                Change(object_type='inventory', object_id=item.id, user=self.getCurrentUserObject(),
+                       changed_field='name', previous_value=item.name, new_value=item_name).save()
 
-            self.return_vars['info'] = 'Successfully updated item %s' % item.name
+                # Update object
+                item.name = item_name
+
+                # Mark that the item has been changed
+                item_updated = True
+
+            if item.image_url != image_url:
+                # Record change in change table
+                Change(object_type='inventory', object_id=item.id, user=self.getCurrentUserObject(),
+                       changed_field='image_url', previous_value=item.image_url, new_value=image_url).save()
+
+                # Update object
+                item.image_url = image_url
+
+                # Mark that the item has been changed
+                item_updated = True
+
+            # Update item with new values
+            if item_updated:
+                item.save()
+                self.return_vars['info'] = 'Successfully updated item %s' % item.name
+            else:
+                self.return_vars['info'] = 'No changes detected'
 
         elif action == 'archive':
             # Obtain item ID from POST variables
@@ -125,6 +149,8 @@ class Stock(PageBase):
             item = Inventory.objects.get(pk=item_id)
 
             # Reverse the item's archive status
+            Change(object_type='inventory', object_id=item.id, user=self.getCurrentUserObject(),
+                   changed_field='archive', previous_value=item.archive, new_value=(not item.archive)).save()
             item.archive = (not item.archive)
             item.save()
 
