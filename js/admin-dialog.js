@@ -40,6 +40,12 @@ function confirmCreditChange(uid, amount, description, credit)
         message = 'Are you sure that you wish to remove \u00A3' + amount + ' from the account of ' + uid;
         document.getElementById('action_' + uid).value = 'debit';
     }
+
+    if (document.getElementById('credit_change_description_' + uid).value == "")
+    {
+        message += "<br /><b>You have not supplied a description</b><br />" +
+                   "It strongly recommended to use a description when making credit changes!";
+    }
     BootstrapDialog.show({
         message: message,
         buttons: [{
