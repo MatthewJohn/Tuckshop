@@ -189,7 +189,7 @@ class CreditTests(TestBase):
         credit_page = getPageObject(Credit, path='', unittest=self,
                                     headers={'Cookie': self.cookie},
                                     post_variables={
-                                        'action': 'pay',
+                                        'action': 'pay_custom',
                                         'amount': '120',
                                         'description': ''
                                     })
@@ -220,15 +220,15 @@ class CreditTests(TestBase):
         credit_page = getPageObject(Credit, path='', unittest=self,
                                     headers={'Cookie': self.cookie},
                                     post_variables={
-                                        'action': 'pay',
+                                        'action': 'pay_custom',
                                         'amount': '120',
                                         'description': ''
                                     })
         credit_page.processRequest(post_request=True)
 
         # Ensure that the request returned an error and no money was removed from the user
-        self.assertEqual(credit_page.return_vars['error'], 'Custom payment is disabled')
-        self.assertTrue('Custom payment is disabled' in credit_page.request_handler.output)
+        self.assertEqual(credit_page.return_vars['error'], 'Error (PD0105): action does not conform')
+        self.assertTrue('Error (PD0105): action does not conform' in credit_page.request_handler.output)
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
 
 
@@ -313,7 +313,7 @@ class CreditTests(TestBase):
             credit_page = getPageObject(Credit, path='', unittest=self,
                                         headers={'Cookie': self.cookie},
                                         post_variables={
-                                            'action': 'pay',
+                                            'action': 'pay_custom',
                                             'amount': invalid_values,
                                             'description': ''
                                         })
