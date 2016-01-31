@@ -7,7 +7,7 @@ class Login(PageBase):
     NAME = 'Login'
     TEMPLATE = 'login'
     REQUIRES_AUTHENTICATION = False
-    ADMIN_PAGE = False
+    PERMISSION = None
 
     def __init__(self, *args, **kwargs):
         """Override the base init method to setup

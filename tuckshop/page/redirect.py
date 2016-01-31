@@ -4,7 +4,7 @@ class Redirect(PageBase):
     """Page for handling redirections"""
     NAME = None
     REQUIRES_AUTHENTICATION = False
-    ADMIN_PAGE = False
+    PERMISSION = None
 
     def __init__(self, request_handler, redirect_url):
         super(Redirect, self).__init__(request_handler)

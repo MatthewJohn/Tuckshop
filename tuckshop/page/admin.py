@@ -4,13 +4,14 @@ from tuckshop.app.models import User
 from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.core.utils import getMoneyString
 from tuckshop.core.tuckshop_exception import TuckshopException
+from tuckshop.core.permission import Permission
 
 class Admin(PageBase):
 
     NAME = 'Admin'
     TEMPLATE = 'admin'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = True
+    PERMISSION = Permission.ADMIN
 
     def processPage(self):
         self.return_vars['users'] = User.objects.all()

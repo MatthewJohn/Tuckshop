@@ -5,13 +5,15 @@ from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.utils import getMoneyString
 from tuckshop.app.models import (InventoryTransaction, StockPayment,
                                  Transaction, User, Inventory)
+from tuckshop.core.permission import Permission
+
 
 class Float(PageBase):
 
     NAME = 'Float'
     TEMPLATE = 'float'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = True
+    PERMISSION = Permission.FLOAT_ACCESS
 
     def processPage(self):
         active_inventory_transactions = InventoryTransaction.getActiveTransactions()
@@ -55,33 +57,7 @@ class Float(PageBase):
             old_sale_price = inventory_transaction_object.sale_price
             remaining_quantity = inventory_transaction_object.getQuantityRemaining()
 
-            if inventory_transaction_object.getQuantitySold():
-                # If any of the items have been sold, create a new transaction for the
-                # items remaining
-                inventory_transaction_object.quantity -= remaining_quantity
-                inventory_transaction_object.save()
-
-                # Create a new inventory transaction for the new item
-                new_inventory_transaction = InventoryTransaction.objects.get(pk=inventory_transaction_object.pk)
-                new_inventory_transaction.pk = None
-                # Update the quantity to reflect the quantity of items being
-                # updated
-                new_inventory_transaction.quantity = remaining_quantity
-                new_inventory_transaction.sale_price = new_sale_price
-
-                # Set the cost to 0, as the cost is captured in the original
-                # inventory transaction
-                new_inventory_transaction.cost = 0
-                new_inventory_transaction.save()
-
-                # Update the timestamp of the new inventory transaction, as it will
-                # default to the current time when created
-                new_inventory_transaction.timestamp = inventory_transaction_object.timestamp
-                new_inventory_transaction.save()
-            else:
-                # Else Simply update the transaction
-                inventory_transaction_object.sale_price = new_sale_price
-                inventory_transaction_object.save()
+            inventory_transaction_object.updateSalePrice(new_sale_price)
 
             self.return_vars['info'] = ('Updated sale price of %s items from %sp to %sp' %
                                         (remaining_quantity, old_sale_price,
