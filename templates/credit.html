@@ -23,7 +23,7 @@
                             {% for item in inventory %}
                             <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 search_item">
                                 <div class="thumbnail">
-                                    <img src="{{ item.getImageUrl() }}" alt="{{ item.name }}">
+                                    <img src="{{ item.getImageObject().getSrc() }}" alt="{{ item.name }}">
                                     <div class="caption">
                                         <form id="purchase-{{ item.id }}" action="/credit" method="post" onsubmit="return purchaseItem(event);">
                                             <input type="hidden" name="action" value="pay" />
