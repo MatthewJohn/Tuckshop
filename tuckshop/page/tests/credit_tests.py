@@ -78,6 +78,8 @@ class CreditTests(TestBase):
                                         'sale_price': self.test_items[1].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that the user has been debitted
         self.user_object.refresh_from_db()
@@ -96,6 +98,8 @@ class CreditTests(TestBase):
                                         'sale_price': self.test_items[1].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         self.user_object.refresh_from_db()
         self.assertEqual(self.user_object.getCurrentCredit(), -448)
@@ -114,6 +118,8 @@ class CreditTests(TestBase):
                                         'sale_price': 12
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Assert that an error was displayed to the user and credit has not changed
         self.assertEqual(credit_page.return_vars['error'], 'There are no items in stock')
@@ -131,6 +137,8 @@ class CreditTests(TestBase):
                                         'sale_price': 50
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that user's account has not been debitted.
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
@@ -148,6 +156,8 @@ class CreditTests(TestBase):
                                         'sale_price': self.test_items[2].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that user's account has not been debitted.
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
@@ -194,6 +204,8 @@ class CreditTests(TestBase):
                                         'description': ''
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that the request returned an error and no money was removed from the user
         self.assertEqual(credit_page.return_vars['error'], None)
@@ -225,6 +237,8 @@ class CreditTests(TestBase):
                                         'description': ''
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that the request returned an error and no money was removed from the user
         self.assertEqual(credit_page.return_vars['error'], 'Error (PD0105): action does not conform')
@@ -289,6 +303,8 @@ class CreditTests(TestBase):
                                         'sale_price': 98
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that user's account has not been debitted.
         self.assertEqual(self.user_object.getCurrentCredit(), -124)

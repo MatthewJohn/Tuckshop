@@ -72,7 +72,7 @@ class PageBase(object):
         self.post_redirect_url_custom = None
 
     def getReturnVars(self):
-        return_vars_key = 'return_vars_%s' % self.__class__.__name__
+        return_vars_key = 'return_vars'
         if self.getSessionVar(return_vars_key):
             self.return_vars = self.getSessionVar(return_vars_key)
             self.setSessionVar(return_vars_key, None)
