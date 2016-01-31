@@ -1,16 +1,17 @@
 from django.db import models
 from enum import Enum
-
-from tuckshop.core.config import Config
-from tuckshop.core.tuckshop_exception import TuckshopException
-from tuckshop.core.redis_connection import RedisConnection
-from tuckshop.core.utils import getMoneyString
 import ldap
 from decimal import Decimal
 import datetime
 from os import environ
 
-# Create your models here.
+from tuckshop.core.config import Config
+from tuckshop.core.tuckshop_exception import TuckshopException
+from tuckshop.core.redis_connection import RedisConnection
+from tuckshop.core.utils import getMoneyString
+from tuckshop.core.image import Image
+
+
 class User(models.Model):
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
@@ -378,9 +379,8 @@ class Inventory(models.Model):
 
         return inventory_transactions
 
-    def getImageUrl(self):
-        # Return the image URL, if it exists. Else, return a default image
-        return self.image_url if self.image_url else 'http://www.monibazar.com/images/noimage.png'
+    def getImageObject(self):
+        return Image(self)
 
     @staticmethod
     def getAvailableItems():
