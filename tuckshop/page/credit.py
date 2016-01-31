@@ -9,7 +9,7 @@ class Credit(PageBase):
     NAME = 'Credit'
     TEMPLATE = 'credit'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = False
+    PERMISSION = None
 
     def processPage(self):
         """Set variables for displaying the credit page"""

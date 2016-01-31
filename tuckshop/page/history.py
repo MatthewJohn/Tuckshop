@@ -10,7 +10,7 @@ class History(PageBase):
     NAME = 'History'
     TEMPLATE = 'history'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = False
+    PERMISSION = None
 
     def processPage(self):
         """Obtains required variables for history page"""

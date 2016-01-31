@@ -16,6 +16,8 @@ from tuckshop.core.config import Config
 from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.app.models import User
+from tuckshop.core.permission import Permission
+
 
 class PageDoesNotExist(TuckshopException):
     pass
@@ -47,7 +49,7 @@ class PageBase(object):
 
     CONTENT_TYPE = 'text/html'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = True
+    PERMISSION = Permission.ADMIN
 
     @staticmethod
     def getUrlBase(request_handler):
@@ -83,8 +85,8 @@ class PageBase(object):
         return self.TEMPLATE
 
     @property
-    def isAdminPage(self):
-        return self.ADMIN_PAGE
+    def permission(self):
+        return self.PERMISSION
 
     @property
     def requiresAuthentication(self):
@@ -211,7 +213,7 @@ class PageBase(object):
     def requiresAdminAccess(self):
         """Determines if the page requies admin permissions and
            whether the user has admin permissions"""
-        if self.isAdminPage and not self.getCurrentUserObject().admin:
+        if self.permission and not self.getCurrentUserObject().checkPermission(self.permission):
             return True
         else:
             return False

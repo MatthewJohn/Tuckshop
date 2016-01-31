@@ -14,6 +14,7 @@ from os import environ
 class User(models.Model):
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
+    permissions = models.IntegerField(default=0)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     current_credit_cache_key = 'User_%s_credit'
@@ -264,6 +265,41 @@ class User(models.Model):
 
     def getStockPaymentTransactions(self):
         return StockPaymentTransaction.objects.filter(user=self)
+
+    @property
+    def isAdmin(self):
+        return self.admin
+
+    @property
+    def _permissionValue(self):
+        return self.permissions
+
+    def setAdmin(self):
+        self.admin = True
+        self.save()
+
+    def removeAdmin(self):
+        self.admin = False
+        self.save()
+
+    def addPermission(self, permission):
+        permission_bit = 1 << permission.value
+        self.permissions = self.permissions | permission_bit
+        self.save()
+
+    def removePermission(self, permission):
+        permission_bit = 1 << permission.value
+        self.permissions = self.permissions ^ permission_bit
+
+    def checkPermission(self, permission):
+        """Determines if the user has a specified permission"""
+        # If the user is an admin, return True -
+        # Users can do EVERYTHING
+        if self.isAdmin:
+            return True
+
+        permission_bit = 1 << permission.value
+        return bool(self._permissionValue & permission_bit)
 
 
 class Inventory(models.Model):

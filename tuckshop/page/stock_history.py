@@ -10,7 +10,7 @@ class StockHistory(PageBase):
     NAME = 'Stock History'
     TEMPLATE = 'stock_history'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = False
+    PERMISSION = None
 
     def processPage(self):
         """Obtains required variables for stock history page"""

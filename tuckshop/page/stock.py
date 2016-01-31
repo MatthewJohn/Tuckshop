@@ -4,6 +4,7 @@ import json
 from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.app.models import Inventory, Transaction, InventoryTransaction, Change
 from tuckshop.core.tuckshop_exception import TuckshopException
+from tuckshop.core.permission import Permission
 
 class Stock(PageBase):
     """Class for displaying the stock page"""
@@ -11,7 +12,7 @@ class Stock(PageBase):
     NAME = 'Stock'
     TEMPLATE = 'stock'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = False
+    PERMISSION = None
 
     def processPage(self):
         """Obtains variables required to display the stock page"""

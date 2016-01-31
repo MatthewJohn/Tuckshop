@@ -8,7 +8,7 @@ class StaticFile(PageBase):
     """Page class for handling static files"""
 
     REQUIRES_AUTHENTICATION = False
-    ADMIN_PAGE = False
+    PERMISSION = None
     CONTENT_TYPE = None
     NAME = None
     BASE_DIR = 'fake'
