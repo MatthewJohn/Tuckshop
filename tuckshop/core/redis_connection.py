@@ -21,6 +21,12 @@ class LocalRedis(object):
         else:
             return None
 
+    def hdel(self, name, keys):
+        if name in self.cache:
+            for key in keys:
+                if key in self.cache[name]:
+                    del(self.cache[name][key])
+
     def set(self, key, value):
         self.cache[key] = value
         return True
@@ -67,6 +73,10 @@ class RedisConnection(object):
     @staticmethod
     def hget(name, key):
         return RedisConnection._getConnection().hget(name, key)
+
+    @staticmethod
+    def hdel(name, keys):
+        return RedisConnection._getConnection().hdel(name, keys)
 
     @staticmethod
     def set(key, value):

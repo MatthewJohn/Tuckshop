@@ -8,6 +8,7 @@ import math
 from mimetypes import read_mime_types
 import time
 import os
+import json
 import re
 import traceback
 from django.db import transaction
@@ -74,16 +75,16 @@ class PageBase(object):
     def getReturnVars(self):
         return_vars_key = 'return_vars'
         if self.getSessionVar(return_vars_key):
-            self.return_vars = self.getSessionVar(return_vars_key)
-            self.setSessionVar(return_vars_key, None)
+            self.return_vars = json.loads(self.getSessionVar(return_vars_key))
+            self.deleteSessionVar(return_vars_key)
+
         else:
             self.return_vars = {
                 'error': None,
                 'warning': None,
                 'info': None,
                 'app_name': Config.APP_NAME(),
-                'page_name': self.name,
-                'page_object': self
+                'page_name': self.name
             }
 
     @property
@@ -254,6 +255,7 @@ class PageBase(object):
         env = Environment()
         env.loader = FileSystemLoader('./templates/')
         template = env.get_template('%s.html' % self.template)
+        self.return_vars['page_object'] = self
         self.request_handler.wfile.write(unicode(template.render(**self.return_vars)).encode('latin1'))
 
     def attemptFunction(self, fun):
@@ -309,7 +311,7 @@ class PageBase(object):
     def postRedirect(self):
         """Perform redirect after post request"""
         # Convert return vars to session variables
-        self.setSessionVar('return_vars', self.return_vars)
+        self.setSessionVar('return_vars', json.dumps(self.return_vars))
         self.response_code = 302
         self.headers['Location'] = self.post_redirect_url
 
@@ -381,6 +383,9 @@ class PageBase(object):
 
     def setSessionVar(self, var, value):
         RedisConnection.hset('session_' + self.getSession(), var, value)
+
+    def deleteSessionVar(self, var):
+        RedisConnection.hdel('session_' + self.getSession(), [var])
 
     def getFile(self, content_type, base_dir, file_name):
         file_name = '%s/%s' % (base_dir, file_name)
