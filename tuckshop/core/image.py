@@ -27,7 +27,7 @@ class Image(object):
         """Sets up the object"""
         self.inventory = inventory
 
-    def getImageUrl(self):
+    def _getImageUrl(self):
         # Return the image URL, if it exists. Else, return a default image
         return self.inventory.image_url if self.inventory.image_url else self.DEFAULT_IMAGE
 
@@ -57,7 +57,7 @@ class Image(object):
                 not RedisConnection.exists(self.mime_type_cache_key) or
                 refresh_cache):
             # Download image
-            image_file = Image.downloadImage(self.getImageUrl())
+            image_file = Image.downloadImage(self._getImageUrl())
 
             if not image_file:
                 image_file = Image.downloadImage(self.DEFAULT_IMAGE)
@@ -82,7 +82,9 @@ class Image(object):
                 RedisConnection.set(self.mime_type_cache_key, mime_type)
 
         else:
+            # If the data and mime-type were found in cache, use them
             image_data = RedisConnection.get(self.cache_key)
             mime_type = RedisConnection.get(self.mime_type_cache_key)
 
+        # Return the mime-type and image_data
         return mime_type, image_data

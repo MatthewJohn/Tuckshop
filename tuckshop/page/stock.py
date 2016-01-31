@@ -124,6 +124,7 @@ class Stock(PageBase):
                 # Mark that the item has been changed
                 item_updated = True
 
+            image_updated = False
             if item.image_url != image_url:
                 # Record change in change table
                 Change(object_type='inventory', object_id=item.id, user=self.getCurrentUserObject(),
@@ -133,11 +134,17 @@ class Stock(PageBase):
                 item.image_url = image_url
 
                 # Mark that the item has been changed
+                image_updated = True
                 item_updated = True
 
             # Update item with new values
             if item_updated:
                 item.save()
+
+                # If the image was updated, refresh the image cache
+                if image_updated:
+                    item.getImageObject().getImage(refresh_cache=True)
+
                 self.return_vars['info'] = 'Successfully updated item %s' % item.name
             else:
                 self.return_vars['info'] = 'No changes detected'
