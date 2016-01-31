@@ -88,3 +88,7 @@ class Image(object):
 
         # Return the mime-type and image_data
         return mime_type, image_data
+
+    def getImageUrl(self):
+        """Returns an absolute URL for the image"""
+        return '/item-image/%s' % self.inventory.id
