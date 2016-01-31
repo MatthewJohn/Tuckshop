@@ -14,7 +14,7 @@ class ItemImage(PageBase):
     def __init__(self, request_handler):
         """Obtains the image object and image data"""
         super(ItemImage, self).__init__(request_handler)
-        self.image_object = Inventory.objects.get(pk=self.get_item_id()).getImageObject()
+        self.image_object = Inventory.objects.get(pk=self.getItemId()).getImageObject()
         self.mime_type, self.image_data = self.image_object.getImage()
 
     @property
@@ -24,8 +24,8 @@ class ItemImage(PageBase):
 
     def getItemId(self):
         """Obtains the item ID from the URL"""
-        if StaticFile.getUrlParts(self.request_handler)[2]:
-            return int(StaticFile.getUrlParts(self.request_handler)[2])
+        if ItemImage.getUrlParts(self.request_handler)[2]:
+            return int(ItemImage.getUrlParts(self.request_handler)[2])
         else:
             raise TuckshopException('Item ID not supplied')
 
