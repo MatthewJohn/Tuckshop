@@ -11,6 +11,7 @@ class History(PageBase):
     TEMPLATE = 'history'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
+    URL = '/history'
 
     def processPage(self):
         """Obtains required variables for history page"""
@@ -28,7 +29,7 @@ class History(PageBase):
 
             total_pages = int(ceil((len(transaction_history) - 1) / Config.TRANSACTION_PAGE_SIZE())) + 1
             self.return_vars['page_data'] = self.getPaginationData(page_number, total_pages,
-                                                                   '/history/%s')
+                                                                   '%s/%%s' % self.URL)
             array_start = (page_number - 1) * Config.TRANSACTION_PAGE_SIZE()
             array_end = page_number * Config.TRANSACTION_PAGE_SIZE()
             transaction_history = transaction_history[array_start:array_end]
