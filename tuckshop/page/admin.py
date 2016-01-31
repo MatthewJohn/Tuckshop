@@ -44,7 +44,7 @@ class Admin(PageBase):
                                                message='Description must be less than 255 characters')
 
             user = User.objects.get(uid=uid)
-            user.addCredit(amount, description=description)
+            user.addCredit(amount, description=description, author=self.getCurrentUserObject())
             self.return_vars['info'] = 'Added %s to %s' % (getMoneyString(amount, include_sign=False),
                                                            user.uid)
         elif action == 'debit':
@@ -52,6 +52,6 @@ class Admin(PageBase):
                                                message='Description must be less than 255 characters')
 
             user = User.objects.get(uid=uid)
-            user.removeCredit(amount, description=description, admin_payment=True)
+            user.removeCredit(amount, description=description, admin_payment=True, author=self.getCurrentUserObject())
             self.return_vars['info'] = 'Removed %s from %s' % (getMoneyString(amount, include_sign=False),
                                                                user.uid)

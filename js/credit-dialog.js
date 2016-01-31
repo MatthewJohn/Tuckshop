@@ -1,10 +1,17 @@
 function purchaseItem(event)
 {
+    var item_id = event.target.getElementsByClassName('item_id')[0].value;
     var item_name = event.target.getElementsByClassName('item_name')[0].innerHTML;
     var item_value = event.target.getElementsByClassName('sale_price_string')[0].value;
 
     BootstrapDialog.show({
-        message: 'Are you sure you wish to purchase a ' + item_name + ' for ' + item_value + '?',
+        title: 'Purchase ' + item_name,
+        message: 'Are you sure you wish to purchase a ' + item_name + ' for ' + item_value + '?' +
+                 '<br /><br />Purchase on behalf of a shared account? <input type="checkbox" name="use_shared_user" value="1" form="purchase-' + item_id + '" onchange="updateSharedAccount(event)">' +
+                 '<br /><div id="item_purchase_shared_account" style="display: none">' +
+                 'Account: <select name="shared_account" id="purchase_shared_account" form="purchase-' + item_id + '"></select><br />' +
+                 '<input type="text" form="purchase-' + item_id + '" name="description" placeholder="Purchase Description..." required />' +
+                 '</div>',
         buttons: [{
             label: 'Purchase',
             action: function(dialogRef) {
@@ -21,6 +28,29 @@ function purchaseItem(event)
         }]
     });
     return false;
+}
+
+function updateSharedAccount(event)
+{
+  var select = document.getElementById("purchase_shared_account");
+  if (event.target.checked == true)
+  {
+    document.getElementById('item_purchase_shared_account').style.display = 'inherit';
+    shared_users.forEach(function(element, index, array){
+      var option = document.createElement('option');
+      option.text = element[1];
+      option.value = element[0];
+      select.add(option);
+    });
+  }
+  else
+  {
+    var length = select.options.length;
+    for (i = 0; i < length; i++) {
+        select.options.remove(i);
+    }
+    document.getElementById('item_purchase_shared_account').style.display = 'none';
+  }
 }
 
 function customPurchase(event)
@@ -42,6 +72,7 @@ function customPurchase(event)
               '<b>Only perform a custom payment if it is absolutely necessary!</b>'
 
     BootstrapDialog.show({
+        title: 'Custom Purchase/Donation',
         message: message,
         buttons: [{
             label: 'Purchase',
