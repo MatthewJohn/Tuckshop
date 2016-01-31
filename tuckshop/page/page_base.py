@@ -68,9 +68,14 @@ class PageBase(object):
         self.response_code = 200
         self.session_id = None
         self.getSessionId()
-        if self.getSessionVar('return_vars'):
-            self.return_vars = self.getSessionVar('return_vars')
-            self.setSessionVar('return_vars', None)
+        self.getReturnVars()
+        self.post_redirect_url_custom = None
+
+    def getReturnVars(self):
+        return_vars_key = 'return_vars_%s' % self.__class__.__name__
+        if self.getSessionVar(return_vars_key):
+            self.return_vars = self.getSessionVar(return_vars_key)
+            self.setSessionVar(return_vars_key, None)
         else:
             self.return_vars = {
                 'error': None,
@@ -80,8 +85,6 @@ class PageBase(object):
                 'page_name': self.name,
                 'page_object': self
             }
-
-        self.post_redirect_url_custom = None
 
     @property
     def name(self):
