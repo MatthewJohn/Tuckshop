@@ -50,6 +50,7 @@ class PageBase(object):
     CONTENT_TYPE = 'text/html'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = Permission.ADMIN
+    POST_URL = ''
 
     @staticmethod
     def getUrlBase(request_handler):
@@ -63,18 +64,27 @@ class PageBase(object):
     def __init__(self, request_handler):
         self.request_handler = request_handler
         self.post_vars = {}
-        self.return_vars = {
-            'error': None,
-            'warning': None,
-            'info': None,
-            'app_name': Config.APP_NAME(),
-            'page_name': self.name,
-            'page_object': self
-        }
         self.headers = {}
         self.response_code = 200
         self.session_id = None
         self.getSessionId()
+        self.getReturnVars()
+        self.post_redirect_url_custom = None
+
+    def getReturnVars(self):
+        return_vars_key = 'return_vars_%s' % self.__class__.__name__
+        if self.getSessionVar(return_vars_key):
+            self.return_vars = self.getSessionVar(return_vars_key)
+            self.setSessionVar(return_vars_key, None)
+        else:
+            self.return_vars = {
+                'error': None,
+                'warning': None,
+                'info': None,
+                'app_name': Config.APP_NAME(),
+                'page_name': self.name,
+                'page_object': self
+            }
 
     @property
     def name(self):
@@ -95,6 +105,10 @@ class PageBase(object):
     @property
     def contentType(self):
         return self.CONTENT_TYPE
+
+    @property
+    def post_redirect_url(self):
+        return self.post_redirect_url_custom or self.POST_URL
 
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
@@ -273,19 +287,31 @@ class PageBase(object):
             # transaction, to ENSURE data entegrity
             with transaction.atomic():
                 self.attemptFunction(self.processPost)
+                self.postRedirect()
 
-        # Process page to determine page content
-        self.attemptFunction(self.processPage)
+        else:
+            # Process page to determine page content
+            self.attemptFunction(self.processPage)
 
-        # Process template
+        # Process headers
         self.processHeaders()
-        self.processTemplate()
+
+        if not post_request:
+            # Process template
+            self.processTemplate()
 
     def processPage(self):
         raise NotImplementedError
 
     def processPost(self):
         raise NotImplementedError
+
+    def postRedirect(self):
+        """Perform redirect after post request"""
+        # Convert return vars to session variables
+        self.setSessionVar('return_vars', self.return_vars)
+        self.response_code = 302
+        self.headers['Location'] = self.post_redirect_url
 
     def getPaginationData(self, current_page, total_pages, url_template):
         if total_pages <= Config.TOTAL_PAGE_DISPLAY():
