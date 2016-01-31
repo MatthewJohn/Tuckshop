@@ -12,6 +12,7 @@ from tuckshop.page.stock_history import StockHistory
 from tuckshop.page.stock import Stock
 from tuckshop.page.admin import Admin
 from tuckshop.page.float import Float
+from tuckshop.page.item_image import ItemImage
 
 class Factory(object):
     """Factory class for obtaining page objects"""
@@ -46,6 +47,8 @@ class Factory(object):
             page_object = Float(request_handler)
         elif name == 'favicon.ico':
             page_object = Favicon(request_handler)
+        elif name == 'item-image':
+            page_object = ItemImage(request_handler)
         else:
             page_object = NotFound(request_handler)
 
