@@ -2,8 +2,10 @@ import urllib2
 import mimetypes
 import tempfile
 import os
+import PIL.Image
 import imghdr
 import base64
+import StringIO
 
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -22,6 +24,10 @@ class Image(object):
     @property
     def mime_type_cache_key(self):
         return 'Image_Mime_%s' % self.inventory.id
+
+    @property
+    def resized_cache_key(self):
+        return 'Image_Thumbnail_%s' % self.inventory.id
 
     def __init__(self, inventory):
         """Sets up the object"""
@@ -80,11 +86,37 @@ class Image(object):
             if mime_type:
                 RedisConnection.set(self.cache_key, image_data)
                 RedisConnection.set(self.mime_type_cache_key, mime_type)
-
         else:
-            # If the data and mime-type were found in cache, use them
             image_data = RedisConnection.get(self.cache_key)
             mime_type = RedisConnection.get(self.mime_type_cache_key)
+
+        if not RedisConnection.exists(self.resized_cache_key) or refresh_cache:
+            # Define thumbnail image size
+            size = (150, 150)
+
+            # Open image using PIL and resize
+            image = PIL.Image.open(StringIO.StringIO(image_data))
+            image.thumbnail(size, PIL.Image.ANTIALIAS)
+
+            # Create transaprent background to put the image on
+            background = PIL.Image.new('RGBA', size, (255, 255, 255, 0))
+            background.paste(image, ((size[0] - image.size[0]) / 2, (size[1] - image.size[1]) / 2))
+
+            # Fake filehandler and filename, so that the extension can be the same as the origin MIME type
+            output = StringIO.StringIO()
+            output.name = 'test.%s' % mime_type
+            background.save(output)
+
+            # Get value of StringIO object to save/return
+            image_data = output.getvalue()
+
+            # Close StringIO object
+            output.close()
+
+            # Update resized image in database
+            RedisConnection.set(self.resized_cache_key, image_data)
+        else:
+            image_data = RedisConnection.get(self.resized_cache_key)
 
         # Return the mime-type and image_data
         return mime_type, image_data
