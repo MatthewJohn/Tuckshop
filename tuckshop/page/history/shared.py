@@ -10,6 +10,7 @@ class Shared(HistoryBase):
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
     URL = '/shared-history'
+    MENU_ORDER = 2
 
     def getTransactionHistory(self):
         return self.getCurrentUserObject().getTransactionHistory(author=True)
