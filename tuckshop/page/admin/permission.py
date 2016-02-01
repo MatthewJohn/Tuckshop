@@ -18,7 +18,7 @@ class Permission(AdminBase):
     SUB_MENU = AdminBase
 
     def processPage(self):
-        self.return_vars['users'] = User.objects.filter(shared=False)
+        self.return_vars['users'] = User.objects.filter(shared=False).order_by('uid')
         self.return_vars['permissions'] = PermissionObj.getDict(return_value=False)
 
     def processPost(self):
