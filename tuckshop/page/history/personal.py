@@ -10,6 +10,7 @@ class Personal(HistoryBase):
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
     URL = '/history'
+    MENU_ORDER = 1
 
     def getTransactionHistory(self):
         return self.getCurrentUserObject().getTransactionHistory()

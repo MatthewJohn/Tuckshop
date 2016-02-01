@@ -13,6 +13,7 @@ class SharedAccounts(HistoryBase):
     REQUIRES_AUTHENTICATION = True
     PERMISSION = Permission.REVIEW_SHARED_ACCOUNTS
     URL = '/shared-account-history'
+    MENU_ORDER = 3
 
     def getTransactionHistory(self):
         return Transaction.objects.filter(user__shared=True)

@@ -9,21 +9,17 @@ class HistoryBase(PageBase):
 
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
+    MENU_ORDER = 0
 
     def getTransactionHistory(self):
         """Returns the transaction values to be displayed in the history page"""
         raise NotImplementedError
 
     def getHistoryMenu(self):
-        from tuckshop.page.history.personal import Personal
-        from tuckshop.page.history.shared import Shared
-        from tuckshop.page.history.stock import Stock
-        from tuckshop.page.history.shared_accounts import SharedAccounts
-        from tuckshop.page.history.unpaid_stock import UnpaidStock
         rows = []
         template = """<ul class="nav nav-tabs">%s</ul>"""
         row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
-        for page_class in [Personal, Shared, Stock, SharedAccounts, UnpaidStock]:
+        for page_class in sorted(HistoryBase.__subclasses__(), key=lambda x: x.MENU_ORDER):
             page_object = page_class(self.request_handler)
             if not page_object.requiresPermission():
                 is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
