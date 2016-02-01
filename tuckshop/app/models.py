@@ -17,6 +17,8 @@ class User(models.Model):
     admin = models.BooleanField(default=False)
     permissions = models.IntegerField(default=0)
     timestamp = models.DateTimeField(auto_now_add=True)
+    shared = models.BooleanField(default=False)
+    shared_name = models.CharField(max_length=255, null=True)
 
     current_credit_cache_key = 'User_%s_credit'
 
@@ -24,7 +26,9 @@ class User(models.Model):
 
         user_object = super(User, self).__init__(*args, **kwargs)
 
-        if not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
+        if self.shared:
+            self.dispaly_name = self.shared_name
+        elif not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
             # Obtain information from LDAP
             ldap_obj = ldap.initialize('ldap://%s:389' % Config.LDAP_SERVER())
             dn = 'uid=%s,o=I.T. Dev Ltd,ou=People,dc=itdev,dc=co,dc=uk' % self.uid
@@ -181,13 +185,14 @@ class User(models.Model):
             balance = int(RedisConnection.get(User.current_credit_cache_key % self.id))
         return balance
 
-    def addCredit(self, amount, description=None):
+    def addCredit(self, amount, author, description=None):
         amount = int(amount)
         if (amount < 0):
             raise Exception('Cannot use negative number')
         current_credit = self.getCurrentCredit()
         transaction = Transaction(user=self, amount=amount, debit=False, description=description,
-                                  payment_type=Transaction.TransactionType.ADMIN_CHANGE.value)
+                                  payment_type=Transaction.TransactionType.ADMIN_CHANGE.value,
+                                  author=author)
         transaction.save()
 
         # Update credit cache
@@ -197,7 +202,9 @@ class User(models.Model):
         return current_credit
 
     def removeCredit(self, amount=None, inventory=None, description=None,
-                     verify_price=None, admin_payment=False):
+                     verify_price=None, admin_payment=False, author=None):
+        if author is None:
+            raise TuckshopException('Author must be specified for credit changes')
         if (inventory and inventory.getQuantityRemaining() <= 0):
             raise TuckshopException('There are no items in stock')
 
@@ -205,7 +212,7 @@ class User(models.Model):
             raise TuckshopException('Item is archived')
 
         current_credit = self.getCurrentCredit()
-        transaction = Transaction(user=self, debit=True)
+        transaction = Transaction(user=self, debit=True, author=author)
 
         if admin_payment:
             payment_type = Transaction.TransactionType.ADMIN_CHANGE.value
@@ -252,14 +259,24 @@ class User(models.Model):
     def getCreditString(self):
         return getMoneyString(self.getCurrentCredit())
 
-    def getTransactionHistory(self, date_from=None, date_to=None):
+    def getTransactionHistory(self, date_from=None, date_to=None, author=False):
+        parameters = {}
         if date_from is None:
-            date_from = datetime.datetime.fromtimestamp(0)
+            parameters['timestamp__gt'] = datetime.datetime.fromtimestamp(0)
 
         if date_to is None:
-            date_to = datetime.datetime.now()
+            parameters['timestamp__lt'] = datetime.datetime.now()
 
-        return Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
+        transactions = Transaction.objects.all()
+
+        if author:
+            parameters['author'] = self
+            parameters['user__shared'] = True
+            transactions = transactions.exclude(user=self)
+        else:
+            parameters['user'] = self
+
+        return transactions.filter(**parameters)
 
     def getStockPayments(self):
         return StockPayment.objects.filter(user=self)
@@ -576,12 +593,13 @@ class InventoryTransaction(models.Model):
 
 
 class Transaction(models.Model):
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, related_name='transaction_user')
     amount = models.IntegerField()
     debit = models.BooleanField(default=True)
     inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
     payment_type = models.IntegerField()
     description = models.CharField(max_length=255, null=True)
+    author = models.ForeignKey(User, related_name='transaction_author')
     timestamp = models.DateTimeField(auto_now_add=True)
 
 

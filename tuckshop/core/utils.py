@@ -53,5 +53,10 @@ def login(username, password):
     else:
         user_object = user_object[0]
 
+        # Determine if the user account is a shared account.
+        # If it is, do not allow the user to login
+        if user_object.shared:
+            return False
+
     # Return user object
     return user_object
