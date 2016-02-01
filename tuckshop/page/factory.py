@@ -10,6 +10,7 @@ from tuckshop.page.static_file import JS, CSS, Font, Favicon
 from tuckshop.page.history.personal import Personal as PersonalHistory
 from tuckshop.page.history.shared import Shared as SharedHistory
 from tuckshop.page.history.stock import Stock as StockHistory
+from tuckshop.page.history.shared_accounts import SharedAccounts as SharedAccountsHistory
 from tuckshop.page.stock import Stock
 from tuckshop.page.admin import Admin
 from tuckshop.page.float import Float
@@ -42,6 +43,8 @@ class Factory(object):
             page_object = StockHistory(request_handler)
         elif  name == 'shared-history':
             page_object = SharedHistory(request_handler)
+        elif name == 'shared-account-history':
+            page_object = SharedAccountsHistory(request_handler)
         elif name == 'stock':
             page_object = Stock(request_handler)
         elif name == 'admin':
