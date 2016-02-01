@@ -6,7 +6,7 @@
                     function salePriceAdjust(inv_trans_id, old_sale_price)
                     {
                         new_price = document.getElementById('sale_price_' + inv_trans_id).value;
-                        message = "Are you sure that you wish to change the sale price from <b>" + old_sale_price + "p</b> to <b>" + new_price + "p</b>?<br /><br />" +
+                        message = "Are you sure that you wish to change the sale price from <b>" + old_sale_price + "</b> to <b>" + new_price + "p</b>?<br /><br />" +
                                   "<b>Note:</b> The cost of the transaction will NOT be changed.<br />" +
                                   "The sale price will only be applied to items that have not yet been sold.<br />" +
                                   "The unsold items (that the sale price change applies to) will be split " +
@@ -29,6 +29,13 @@
                             "<b>Note:</b> The transaction cost will NOT be changed.<br />" +
                             "You may only decrease the quantity to the point of no more items available (i.e. cannot be decreased below the number of items that have already been sold)";
                         showDialog(message, "update_quantity_" + inv_trans_id);
+                    }
+                    function costAdjust(inv_trans_id, old_price)
+                    {
+                        new_cost = document.getElementById('cost_price_' + inv_trans_id).value;
+                        message = 'Are you sure that you wish to change the cost price from <b>' + old_price + '</b> to <b>\u00A3' + new_cost + '</b>?<br /><br />' +
+                                  '<b>Note:</b> You cannot decrease the cost price past the amount that has been paid back for the stock';
+                        showDialog(message, "update_cost_" + inv_trans_id);
                     }
                     function showDialog(message, form_name)
                     {
@@ -73,10 +80,14 @@
                         {% for inventory_transaction in inventory_item.getInventoryTransactions(only_active=True) -%}
                         <tr>
                             <td>{{ inventory_transaction.user.uid }}</td>
-                            <td>{{ inventory_transaction.getCostString() }}</td>
+                            <td>
+                                <span for="cost_price_{{ inventory_transaction.pk }}">&pound;</span>
+                                <input value="{{ "%.2f" % (inventory_transaction.cost / 100) }}" id="cost_price_{{ inventory_transaction.pk }}" name="cost_price" size="5" form="update_cost_{{ inventory_transaction.pk }}" onkeypress="return handleEnter(event, function () { costAdjust({{ inventory_transaction.pk }}, '{{ inventory_transaction.getCostString() }}'); });" />
+                                <button class="btn btn-warning btn-xs" onclick="costAdjust({{ inventory_transaction.pk }}, '{{ inventory_transaction.getCostString() }}')">Update</button>
+                            </td>
                             <td>
                                 <input value="{{ inventory_transaction.sale_price }}" id="sale_price_{{ inventory_transaction.pk }}" name="sale_price" form="update_sale_price_{{ inventory_transaction.pk }}" size="2" onkeypress="return handleEnter(event, function() { salePriceAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.sale_price }}); });" />
-                                <button class="btn btn-warning btn-xs" onclick="salePriceAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.sale_price }})">Update</button>
+                                <button class="btn btn-warning btn-xs" onclick="salePriceAdjust({{ inventory_transaction.pk }}, '{{ inventory_transaction.getSalePriceString() }}')">Update</button>
                             </td>
                             <td>
                                 <input value="{{ inventory_transaction.getQuantityRemaining() }}" name="quantity" id="quantity_{{ inventory_transaction.pk }}" form="update_quantity_{{ inventory_transaction.pk }}" size="2" onkeypress="return handleEnter(event, function () { quantityAdjust({{ inventory_transaction.pk }}, {{ inventory_transaction.getQuantityRemaining() }}); });" /> / {{ inventory_transaction.getQuantitySold() }} / {{ inventory_transaction.quantity }}
@@ -96,6 +107,10 @@
                     </form>
                     <form id="update_quantity_{{ inventory_transaction.pk }}" action="" method="post">
                         <input type="hidden" name="action" value="update_quantity" />
+                        <input type="hidden" name="inventory_transaction_id" value="{{ inventory_transaction.pk }}" />
+                    </form>
+                    <form id="update_cost_{{ inventory_transaction.pk }}" action="" method="post">
+                        <input type="hidden" name="action" value="update_cost" />
                         <input type="hidden" name="inventory_transaction_id" value="{{ inventory_transaction.pk }}" />
                     </form>
                     {% endfor -%}
