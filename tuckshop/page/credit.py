@@ -51,7 +51,8 @@ class Credit(PageBase):
             payment_arguments = {
                 'inventory': inventory_object,
                 'verify_price': original_price,
-                'author': current_user
+                'author': current_user,
+                'affect_float': False
             }
 
             if use_shared_user:
@@ -73,4 +74,4 @@ class Credit(PageBase):
                                           special=[VariableVerificationTypes.POSITIVE])
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
                                                message='Description must be less than 255 characters')
-            user_object.removeCredit(amount=amount, description=description, author=user_object)
+            user_object.removeCredit(amount=amount, description=description, author=user_object, affect_float=False)

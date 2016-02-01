@@ -95,13 +95,14 @@ class Float(PageBase):
             float_amount -= stock_payment.amount
 
         # Get the total value of payements for items
-        for transaction in Transaction.objects.filter(debit=True):
-            float_amount += transaction.amount
+        for transaction in Transaction.objects.filter(affect_float=True):
+            if transaction.debit:
+                float_amount -= transaction.amount
+            else:
+                float_amount += transaction.amount
 
         # Adjust float based on user's current credit
         for user in User.objects.all():
-            user_current_credit = user.getCurrentCredit()
-            float_amount += user.getCurrentCredit()
             total_user_balance += user.getCurrentCredit()
 
         return float_amount, total_user_balance

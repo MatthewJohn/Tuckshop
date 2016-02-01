@@ -47,16 +47,19 @@ class Admin(AdminBase):
         elif action == 'credit':
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
                                                message='Description must be less than 255 characters')
+            affect_float = self.getPostVariable(name='affect_float', var_type=bool, default=False, set_default=True)
 
             user = User.objects.get(uid=uid)
-            user.addCredit(amount, description=description, author=self.getCurrentUserObject())
+            user.addCredit(amount=amount, description=description, author=self.getCurrentUserObject(), affect_float=affect_float)
             self.return_vars['info'] = 'Added %s to %s' % (getMoneyString(amount, include_sign=False),
                                                            user.uid)
         elif action == 'debit':
             description = self.getPostVariable(name='description', var_type=str, default=None, set_default=True,
                                                message='Description must be less than 255 characters')
+            affect_float = self.getPostVariable(name='affect_float', var_type=bool, default=False, set_default=True)
 
             user = User.objects.get(uid=uid)
-            user.removeCredit(amount, description=description, admin_payment=True, author=self.getCurrentUserObject())
+            user.removeCredit(amount=amount, description=description, admin_payment=True, author=self.getCurrentUserObject(),
+                              affect_float=affect_float)
             self.return_vars['info'] = 'Removed %s from %s' % (getMoneyString(amount, include_sign=False),
                                                                user.uid)
