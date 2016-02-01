@@ -14,6 +14,7 @@ from tuckshop.page.history.unpaid_stock import UnpaidStock
 from tuckshop.page.history.shared_accounts import SharedAccounts as SharedAccountsHistory
 from tuckshop.page.stock import Stock
 from tuckshop.page.admin.admin import Admin
+from tuckshop.page.history.user import User as UserHistory
 from tuckshop.page.admin.permission import Permission
 from tuckshop.page.float import Float
 from tuckshop.page.item_image import ItemImage
@@ -55,6 +56,8 @@ class Factory(object):
             page_object = Admin(request_handler)
         elif name == 'permission':
             page_object = Permission(request_handler)
+        elif name == 'user-history':
+            page_object = UserHistory(request_handler)
         elif name == 'float':
             page_object = Float(request_handler)
         elif name == 'favicon.ico':
