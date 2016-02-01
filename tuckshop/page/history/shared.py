@@ -1,6 +1,4 @@
 """Contains class for history page"""
-from math import ceil
-
 from tuckshop.page.history.history_base import HistoryBase
 from tuckshop.core.config import Config
 
