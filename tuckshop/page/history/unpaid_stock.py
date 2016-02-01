@@ -14,4 +14,4 @@ class UnpaidStock(HistoryBase):
     SUB_MENU = HistoryBase
 
     def getTransactionHistory(self):
-        return sorted(self.getCurrentUserObject().getUnpaidTransactions(), key=lambda x: x.timestamp)
+        return sorted(self.getCurrentUserObject().getUnpaidTransactions(), key=lambda x: x.timestamp, reverse=True)
