@@ -13,6 +13,8 @@ class Stock(PageBase):
     TEMPLATE = 'stock'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
+    MENU_ORDER = 3
+    URL = '/stock'
 
     def processPage(self):
         """Obtains variables required to display the stock page"""

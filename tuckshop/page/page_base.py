@@ -52,6 +52,10 @@ class PageBase(object):
     REQUIRES_AUTHENTICATION = True
     PERMISSION = Permission.ADMIN
     POST_URL = ''
+    SUB_MENU = None
+    MENU_ORDER = None
+    MENU_NAME = None
+    SUB_MENU_ORDER = None
 
     @staticmethod
     def getUrlBase(request_handler):
@@ -106,6 +110,10 @@ class PageBase(object):
     @property
     def contentType(self):
         return self.CONTENT_TYPE
+
+    @property
+    def menuName(self):
+        return self.MENU_NAME if self.MENU_NAME else self.NAME
 
     @property
     def post_redirect_url(self):
@@ -198,6 +206,48 @@ class PageBase(object):
                 raise TuckshopException(message % 'PDO0111')
 
         return value
+
+    def getSubMenu(self):
+        if self.SUB_MENU:
+            rows = []
+            template = """<ul class="nav nav-tabs">%s</ul>"""
+            row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
+            for page_class in sorted(self.SUB_MENU.__subclasses__(), key=lambda x: x.SUB_MENU_ORDER):
+                page_object = page_class(self.request_handler)
+                if not page_object.requiresPermission():
+                    is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
+                    rows.append(row_template % (is_active, page_object.URL, page_object.NAME))
+
+            return template % ''.join(rows)
+        else:
+            return ''
+
+    def getMenu(self):
+        rows = []
+        template = """<ul class="nav nav-pills nav-justified">%s</ul>"""
+        row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
+        if self.isLoggedIn():
+            for page_class in sorted(PageBase.all_subclasses(PageBase), key=lambda x: x.MENU_ORDER):
+                if page_class.MENU_ORDER:
+                    page_object = page_class(self.request_handler)
+
+                    if not page_object.requiresPermission():
+                        is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
+                        rows.append(row_template % (is_active, page_object.URL, page_object.menuName))
+        else:
+            rows.append(row_template % ('', '/login', 'Login'))
+
+        return template % ''.join(rows)
+
+    @staticmethod
+    def all_subclasses(cls):
+        all_subclasses = []
+
+        for subclass in cls.__subclasses__():
+            all_subclasses.append(subclass)
+            all_subclasses.extend(PageBase.all_subclasses(subclass))
+
+        return all_subclasses
 
     def isLoggedIn(self):
         if (self.getSessionVar('username')):

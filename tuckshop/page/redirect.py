@@ -6,10 +6,11 @@ class Redirect(PageBase):
     REQUIRES_AUTHENTICATION = False
     PERMISSION = None
 
-    def __init__(self, request_handler, redirect_url):
+    def __init__(self, request_handler, redirect_url=''):
         super(Redirect, self).__init__(request_handler)
+        self.redirect_url = redirect_url
         self.response_code = 302
-        self.headers['Location'] = redirect_url
+        self.headers['Location'] = self.redirect_url
 
     def processTemplate(self):
         pass

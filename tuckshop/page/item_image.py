@@ -11,12 +11,6 @@ class ItemImage(PageBase):
     PERMISSION = None
     NAME = None
 
-    def __init__(self, request_handler):
-        """Obtains the image object and image data"""
-        super(ItemImage, self).__init__(request_handler)
-        self.image_object = Inventory.objects.get(pk=self.getItemId()).getImageObject()
-        self.mime_type, self.image_data = self.image_object.getImage()
-
     @property
     def CONTENT_TYPE(self):
         """Returns the mime-type returned by the image"""
@@ -30,8 +24,9 @@ class ItemImage(PageBase):
             raise TuckshopException('Item ID not supplied')
 
     def processPage(self):
-        """There is no processing requireed for the page"""
-        pass
+        """Obtains the image object and image data"""
+        self.image_object = Inventory.objects.get(pk=self.getItemId()).getImageObject()
+        self.mime_type, self.image_data = self.image_object.getImage()
 
     def processPost(self):
         """There is no post action for this page"""

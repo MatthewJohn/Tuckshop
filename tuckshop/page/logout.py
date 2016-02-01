@@ -3,7 +3,11 @@ from tuckshop.page.redirect import Redirect
 class Logout(Redirect):
     """Logs the user out, clearing the session and redirect to the root URL"""
 
-    def __init__(self, *args, **kwargs):
+    NAME = 'Logout'
+    MENU_ORDER = 6
+    URL = '/logout'
+
+    def processPage(self, *args, **kwargs):
         super(Logout, self).__init__(redirect_url='/', *args, **kwargs)
         self.setSessionVar('username', None)
         self.setSessionVar('password', None)

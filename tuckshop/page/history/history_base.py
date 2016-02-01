@@ -9,23 +9,10 @@ class HistoryBase(PageBase):
 
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
-    MENU_ORDER = 0
 
     def getTransactionHistory(self):
         """Returns the transaction values to be displayed in the history page"""
         raise NotImplementedError
-
-    def getHistoryMenu(self):
-        rows = []
-        template = """<ul class="nav nav-tabs">%s</ul>"""
-        row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
-        for page_class in sorted(HistoryBase.__subclasses__(), key=lambda x: x.MENU_ORDER):
-            page_object = page_class(self.request_handler)
-            if not page_object.requiresPermission():
-                is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
-                rows.append(row_template % (is_active, page_object.URL, page_object.NAME))
-
-        return template % ''.join(rows)
 
     def processPage(self):
         """Obtains required variables for history page"""

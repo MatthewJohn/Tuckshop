@@ -10,7 +10,8 @@ class Stock(HistoryBase):
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
     URL = '/stock-history'
-    MENU_ORDER = 4
+    SUB_MENU_ORDER = 4
+    SUB_MENU = HistoryBase
 
     def getTransactionHistory(self):
         return self.getCurrentUserObject().getStockPaymentTransactions()

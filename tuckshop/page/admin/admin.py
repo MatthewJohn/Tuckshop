@@ -1,17 +1,22 @@
 """Contains class for admin page"""
 
 from tuckshop.app.models import User
-from tuckshop.page.page_base import PageBase, VariableVerificationTypes
+from tuckshop.page.page_base import VariableVerificationTypes
+from tuckshop.page.admin.admin_base import AdminBase
 from tuckshop.core.utils import getMoneyString
 from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.permission import Permission
 
-class Admin(PageBase):
+class Admin(AdminBase):
 
     NAME = 'Admin'
     TEMPLATE = 'admin'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = Permission.ADMIN
+    SUB_MENU_ORDER = 1
+    MENU_ORDER = 5
+    SUB_MENU = AdminBase
+    URL = '/admin'
 
     def processPage(self):
         self.return_vars['users'] = User.objects.all()
