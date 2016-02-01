@@ -41,7 +41,7 @@ class Float(PageBase):
     def processPost(self):
         """There are no post requests handled by the float page"""
         # Obtain common post variables and inventory transaction object
-        action = self.getPostVariable(name='action', possible_values=['update_sale_price', 'update_quantity'])
+        action = self.getPostVariable(name='action', possible_values=['update_sale_price', 'update_quantity', 'update_cost'])
         inventory_transaction_id = self.getPostVariable(name='inventory_transaction_id', var_type=int,
                                                         special=[VariableVerificationTypes.POSITIVE])
         inventory_transaction_object = InventoryTransaction.objects.get(pk=inventory_transaction_id)
@@ -83,6 +83,21 @@ class Float(PageBase):
             self.return_vars['info'] = ('Updated quantity from %s to %s (%s now available)' %
                                         (old_quantity, new_quantity,
                                          inventory_transaction_object.getQuantityRemaining()))
+
+        elif action == 'update_cost':
+            new_cost = self.getPostVariable(name='cost_price', var_type=float, special=[VariableVerificationTypes.FLOAT_MONEY],
+                                            message='Cost price must be a valid amount in pounds, e.g. 1.50')
+            new_cost = int(new_cost * 100)
+            old_cost = inventory_transaction_object.cost
+
+            if new_cost < inventory_transaction_object.getAmountPaid():
+                raise TuckshopException('New Inventory Transaction cost is less than amount that has already been paid')
+
+            inventory_transaction_object.cost = new_cost
+            inventory_transaction_object.save()
+
+            self.return_vars['info'] = 'Updated cost of %s from %s to %s' % (inventory_transaction_object.inventory.name,
+                                                                             getMoneyString(old_cost), getMoneyString(new_cost))
 
 
     def getCurrentFloat(self):
