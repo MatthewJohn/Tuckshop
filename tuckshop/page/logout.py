@@ -7,8 +7,10 @@ class Logout(Redirect):
     MENU_ORDER = 6
     URL = '/logout'
 
-    def processPage(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(Logout, self).__init__(redirect_url='/', *args, **kwargs)
+
+    def processPage(self):
         self.setSessionVar('username', None)
         self.setSessionVar('password', None)
         self.session_id = self.getSession(clear_cookie=True)
