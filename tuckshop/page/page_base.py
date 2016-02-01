@@ -225,7 +225,7 @@ class PageBase(object):
         else:
             return False
     
-    def requiresAdminAccess(self):
+    def requiresPermission(self):
         """Determines if the page requies admin permissions and
            whether the user has admin permissions"""
         if self.permission and not self.getCurrentUserObject().checkPermission(self.permission):
@@ -234,7 +234,7 @@ class PageBase(object):
             return False
 
     def checkAuthentication(self):
-        if self.requiresLogin() or self.requiresAdminAccess():
+        if self.requiresLogin() or self.requiresPermission():
             raise Exception('Attempting to process page without required permissions')
 
     def processHeaders(self):

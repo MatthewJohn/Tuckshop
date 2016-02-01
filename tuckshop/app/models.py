@@ -259,14 +259,24 @@ class User(models.Model):
     def getCreditString(self):
         return getMoneyString(self.getCurrentCredit())
 
-    def getTransactionHistory(self, date_from=None, date_to=None):
+    def getTransactionHistory(self, date_from=None, date_to=None, author=False):
+        parameters = {}
         if date_from is None:
-            date_from = datetime.datetime.fromtimestamp(0)
+            parameters['timestamp__gt'] = datetime.datetime.fromtimestamp(0)
 
         if date_to is None:
-            date_to = datetime.datetime.now()
+            parameters['timestamp__lt'] = datetime.datetime.now()
 
-        return Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
+        transactions = Transaction.objects.all()
+
+        if author:
+            parameters['author'] = self
+            parameters['user__shared'] = True
+            transactions = transactions.exclude(user=self)
+        else:
+            parameters['user'] = self
+
+        return transactions.filter(**parameters)
 
     def getStockPayments(self):
         return StockPayment.objects.filter(user=self)

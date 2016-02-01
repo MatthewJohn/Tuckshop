@@ -7,8 +7,9 @@ from tuckshop.page.logout import Logout
 from tuckshop.page.credit import Credit
 from tuckshop.page.redirect import Redirect
 from tuckshop.page.static_file import JS, CSS, Font, Favicon
-from tuckshop.page.history import History
-from tuckshop.page.stock_history import StockHistory
+from tuckshop.page.history.personal import Personal as PersonalHistory
+from tuckshop.page.history.shared import Shared as SharedHistory
+from tuckshop.page.history.stock import Stock as StockHistory
 from tuckshop.page.stock import Stock
 from tuckshop.page.admin import Admin
 from tuckshop.page.float import Float
@@ -36,9 +37,11 @@ class Factory(object):
         elif name == 'font':
             page_object = Font(request_handler)
         elif name == 'history':
-            page_object = History(request_handler)
+            page_object = PersonalHistory(request_handler)
         elif name == 'stock-history':
             page_object = StockHistory(request_handler)
+        elif  name == 'shared-history':
+            page_object = SharedHistory(request_handler)
         elif name == 'stock':
             page_object = Stock(request_handler)
         elif name == 'admin':
@@ -56,7 +59,7 @@ class Factory(object):
             # If page requires login, redirect to login page
             redirect_url = Login.getLoginUrl(request_handler)
             page_object = Redirect(request_handler, redirect_url)
-        elif page_object.requiresAdminAccess():
+        elif page_object.requiresPermission():
             page_object = NotFound(request_handler)
 
         return page_object

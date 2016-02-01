@@ -11,7 +11,8 @@ function purchaseItem(event)
                  '<br /><div id="item_purchase_shared_account" style="display: none">' +
                  'Account: <select name="shared_account" id="purchase_shared_account" form="purchase-' + item_id + '"></select><br />' +
                  '<input type="text" form="purchase-' + item_id + '" name="description" placeholder="Purchase Description..." required />' +
-                 '</div>',
+                 '<br /><b>Only purchase from shared accounts when you have authorisation to do so.<br />' +
+                 'Purchases made to shared accounts are regularly monitored.</b></div>',
         buttons: [{
             label: 'Purchase',
             action: function(dialogRef) {
