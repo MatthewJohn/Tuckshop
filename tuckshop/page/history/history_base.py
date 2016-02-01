@@ -19,10 +19,11 @@ class HistoryBase(PageBase):
         from tuckshop.page.history.shared import Shared
         from tuckshop.page.history.stock import Stock
         from tuckshop.page.history.shared_accounts import SharedAccounts
+        from tuckshop.page.history.unpaid_stock import UnpaidStock
         rows = []
         template = """<ul class="nav nav-tabs">%s</ul>"""
         row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
-        for page_class in [Personal, Shared, Stock, SharedAccounts]:
+        for page_class in [Personal, Shared, Stock, SharedAccounts, UnpaidStock]:
             page_object = page_class(self.request_handler)
             if not page_object.requiresPermission():
                 is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
