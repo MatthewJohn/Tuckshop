@@ -19,7 +19,7 @@
                         {
                             latest_transactions[item_id].forEach(function(element, index, array){
                                 var option = document.createElement("option");
-                                option.text = "Quantity: " + element[1] + ", Cost (total): \u00A3" + element[2] + ", Sale Price: " + element[3] + "p, " + element[4];
+                                option.text = "Q: " + element[1] + ", C: \u00A3" + element[2] + ", SP: " + element[3] + "p, " + element[4];
                                 option.value = JSON.stringify(element);
                                 select.add(option);
                             });
@@ -66,61 +66,90 @@
                     }
                     </script>
                     <div class="row" id="central position-central">
-                        <div class="col-md-12" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
+                        <div class="col-md-12 form-horizontal" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
                             <h2>Add Stock</h2>
                             <form action="/stock" method="post">
-                                <div class="col-lg-5 col-md-5 col-sm-6 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <label for="inv_dropdown" >Item:</label>
-                                    </span>
-                                    <select class="form-control" id="inv_dropdown" name="inv_id" onchange="update_common(this.value)">
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="selectbasic">Item</label>
+                                    <div class="col-md-4">
+                                        <select id="inv_dropdown" name="inv_id" class="form-control" onchange="update_common(this.value)">
                                         {% for item in active_items %}
-                                        <option value="{{ item.id }}">{{ item.getDropdownName() }}</option>
+                                            <option value="{{ item.id }}">{{ item.getDropdownName() }}</option>
                                         {% endfor %}
-                                    </select>
+                                        </select>
+                                  </div>
                                 </div>
-                                <div class="col-lg-9 col-md-9 col-sm-10 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <label for="common_dropdown" >Common transactions:</label>
-                                    </span>
-                                    <select class="form-control" id="common_dropdown" onchange="update_fields(this.value)" disabled>
-                                    </select>
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="common_dropdown">Common Transactions</label>
+                                    <div class="col-md-6">
+                                        <select id="common_dropdown" name="common_dropdown" class="form-control" onchange="update_fields(this.value)" disabled>
+                                        </select>
+                                        <p class="help-block">Select a recent transaction to pre-fill form<br />(Q: Quantity, C: Cost, SP: Sale Price)</p>
+                                    </div>
                                 </div>
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <label for="quantity_input">Quantity:</label>
-                                    </span>
-                                    <input type="text" class="form-control" id="quantity_input" size="5" name="quantity" />
+
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="quantity_input">Quantity</label>  
+                                    <div class="col-md-2">
+                                        <input id="quantity_input" name="quantity" placeholder="5" class="form-control input-md" required="" type="text">
+                                        <span class="help-block">Quantity of items to be added</span>  
+                                    </div>
                                 </div>
-                                <div class="col-lg-7 col-md-7 col-sm-10 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <label for="sale_price_input">Sale price (blank for current price):</label>
-                                    </span>
-                                    <input type="text" class="form-control" id="sale_price_input" size="5" name="sale_price" />
-                                    <div class="input-group-addon">p</div>
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="appendedtext">Sale Price (Optional)</label>
+                                    <div class="col-md-2">
+                                        <div class="input-group">
+                                            <input id="sale_price_input" name="sale_price" class="form-control" placeholder="30" type="text">
+                                            <span class="input-group-addon">p</span>
+                                        </div>
+                                        <p class="help-block">Sale price of each item for the stock. Leave blank for current price.</p>
+                                    </div>
                                 </div>
-                                <div class="col-lg-4 col-md-6 col-sm-6 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <input type="radio" checked="checked" name="cost_type" id="total_cost_radio" value="total" aria-label="...">
-                                        <label>Total Cost (&pound;):</label>
-                                    </span>
-                                    <input type="text" class="form-control" id="cost_input_total" size="5" name="cost_total" aria-describedby="cost-addon" />
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="cost_input_total">Total Cost</label>
+                                    <div class="col-md-3">
+                                        <div class="input-group">
+                                            <span class="input-group-addon">     
+                                                <input checked="checked" name="cost_type" id="total_cost_radio" value="total" type="radio"> &pound;
+                                            </span>
+                                            <input id="cost_input_total" name="cost_total" class="form-control" placeholder="1.50" type="text">
+                                        </div>
+                                    <p class="help-block">Provide the total cost of the stock</p>
+                                  </div>
                                 </div>
-                                <div class="col-lg-5 col-md-6 col-sm-12 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <input type="radio" selected="true" name="cost_type" value="each" aria-label="...">
-                                        <label>Cost per Item:</label>
-                                    </span>
-                                        <input type="text" class="form-control" id="cost_input_each" size="5" name="cost_each" aria-describedby="cost-addon" />
-                                        <div class="input-group-addon">p</div>
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="cost_input_total">Cost per Item</label>
+                                    <div class="col-md-3">
+                                        <div class="input-group">
+                                            <span class="input-group-addon">     
+                                                <input checked="checked" name="cost_type" id="each_cost_radio" value="each" type="radio">
+                                            </span>
+                                            <input id="cost_input_each" name="cost_each" class="form-control" placeholder="30" type="text">
+                                            <span class="input-group-addon">p</span>
+                                        </div>
+                                    <p class="help-block">Provide the cost price of each item</p>
+                                  </div>
                                 </div>
-                                <div class="col-lg-6 col-md-6 col-sm-10 col-xs-12 input-group">
-                                    <span class="input-group-addon">
-                                        <label for="description_input">Description:</label>
-                                    </span>
-                                    <input type="text" class="form-control" id="description_input" placeholder="Enter description to add to recent transactions..." size="20" name="description" />
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="description_input">Description</label>  
+                                    <div class="col-md-6">
+                                        <input id="description_input" name="description" placeholder="Description..." class="form-control input-md" required="" type="text">
+                                        <span class="help-block">Enter description to add to recent transactions</span>  
+                                    </div>
                                 </div>
-                                <input type="submit" name="action" value="Add Stock" class="btn btn-info" />
+
+                                <div class="form-group">
+                                    <label class="col-md-4 control-label" for="singlebutton"></label>
+                                    <div class="col-md-4">
+                                        <input type="submit" name="action" value="Add Stock" class="btn btn-info" />
+                                    </div>
+                                </div>
                             </form>
                         </div>
                         <div class="col-md-12" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
