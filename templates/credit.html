@@ -9,8 +9,8 @@
                     <script src="/js/credit-dialog.js"></script>
 
                     <div class="row" id="central">
-                        <div class="col-md-8 col-sm-12 col-xs-12">
-                            <div class="col-md-8">
+                        <div class="col-md-12 col-sm-12 col-xs-12">
+                            <div class="col-md-9">
                                 <h1>{{ app_name }}</h1>
                                 <div id="current-credit">
                                     <h4>Welcome to the tuck shop, {{ user.display_name }}.</h4>
@@ -18,8 +18,9 @@
                                     <h3>You currently have {{ user.getCreditString() }} in your account.</h3>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-4 col-sm-12 col-xs-12" style="margin-top: 40px; float: right;" onkeyup="updateSearch(event)" >
-                                <input id="search_input" class="form-control" placeholder="Search..."/>
+                            <div class="col-lg-3 col-md-3 hidden-sm hidden-xs" style="height:130px"></div>
+                            <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12" onkeyup="updateSearch(event)" >
+                                <input id="search_input" class="form-control" style="margin-bottom: 10px" placeholder="Search..."/>
                             </div>
                         </div>
 
