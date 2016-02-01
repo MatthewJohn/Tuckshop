@@ -185,14 +185,14 @@ class User(models.Model):
             balance = int(RedisConnection.get(User.current_credit_cache_key % self.id))
         return balance
 
-    def addCredit(self, amount, author, description=None):
+    def addCredit(self, amount, author, affect_float, description=None):
         amount = int(amount)
         if (amount < 0):
             raise Exception('Cannot use negative number')
         current_credit = self.getCurrentCredit()
         transaction = Transaction(user=self, amount=amount, debit=False, description=description,
                                   payment_type=Transaction.TransactionType.ADMIN_CHANGE.value,
-                                  author=author)
+                                  author=author, affect_float=affect_float)
         transaction.save()
 
         # Update credit cache
@@ -201,7 +201,7 @@ class User(models.Model):
                             current_credit)
         return current_credit
 
-    def removeCredit(self, amount=None, inventory=None, description=None,
+    def removeCredit(self, affect_float, amount=None, inventory=None, description=None,
                      verify_price=None, admin_payment=False, author=None):
         if author is None:
             raise TuckshopException('Author must be specified for credit changes')
@@ -247,6 +247,7 @@ class User(models.Model):
         transaction.payment_type = payment_type
         transaction.amount = amount
         transaction.description = description
+        transaction.affect_float = affect_float
         transaction.save()
 
         # Update credit cache
@@ -601,6 +602,7 @@ class Transaction(models.Model):
     payment_type = models.IntegerField()
     description = models.CharField(max_length=255, null=True)
     author = models.ForeignKey(User, related_name='transaction_author')
+    affect_float = models.BooleanField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
 
