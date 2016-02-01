@@ -54,7 +54,7 @@ class Credit(PageBase):
 
             if use_shared_user:
                 payment_arguments['description'] = self.getPostVariable(name='description', var_type=str,
-                                                                        message='Description must be less than 255 characters',
+                                                                        message='Description must be provided and be less than 255 characters',
                                                                         special=[VariableVerificationTypes.NOT_EMPTY])
                 shared_account_ids = [account.id for account in User.objects.filter(shared=True)]
                 shared_account_id = self.getPostVariable(name='shared_account', var_type=int, possible_values=shared_account_ids)

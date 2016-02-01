@@ -2,16 +2,17 @@
 {% block content %}
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
-                            <h2>Transaction History</h2>
+                            <h2>Shared Account Purchase History</h2>
+                            {{ page_object.getHistoryMenu() }}
                             <table class="table">
-                                <tr><th>Date/Time</th><th>Item</th><th>Amount</th><th>Balance</th></tr>
+                                <tr><th>Date/Time</th><th>Item</th><th>Amount</th><th>Account</th></tr>
                                     {% if transaction_history %}
                                         {% for transaction in transaction_history %}
                                             <tr>
                                                 <td>{{ transaction.toTimeString() }}</td>
                                                 <td>{% if transaction.description %}{{ transaction.description }}{% elif transaction.inventory_transaction %}{{ transaction.inventory_transaction.inventory.name }}{% endif %}</td>
                                                 <td>{{ transaction.getAmountString() }}</td>
-                                                <td>{{ transaction.getCurrentCreditString() }}</td>
+                                                <td>{{ transaction.user.shared_name }}</td>
                                             </tr>
                                     {% endfor %}
                                 </table>
@@ -28,7 +29,6 @@
                                   </ul>
                                 </nav>
                             {% endif %}
-                            <span>See <a href='/stock-history'>Stock Payment History</a></span>
                         </div>
                     </div>
 {% endblock %}
