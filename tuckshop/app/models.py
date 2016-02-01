@@ -302,12 +302,13 @@ class User(models.Model):
 
     def addPermission(self, permission):
         permission_bit = 1 << permission.value
-        self.permissions = self.permissions | permission_bit
+        self.permissions |= permission_bit
         self.save()
 
     def removePermission(self, permission):
         permission_bit = 1 << permission.value
-        self.permissions = self.permissions ^ permission_bit
+        self.permissions &= ~permission_bit
+        self.save()
 
     def checkPermission(self, permission):
         """Determines if the user has a specified permission"""

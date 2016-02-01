@@ -14,6 +14,8 @@ class Float(PageBase):
     TEMPLATE = 'float'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = Permission.FLOAT_ACCESS
+    MENU_ORDER = 4
+    URL = '/float'
 
     def processPage(self):
         active_inventory_transactions = InventoryTransaction.getActiveTransactions()

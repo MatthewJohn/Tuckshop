@@ -27,7 +27,7 @@ class Login(PageBase):
         action = self.getPostVariable(name='action', possible_values=['login'])
         if (action == 'login'):
             self.return_vars['auth_error'] = '<div class="alert alert-danger" role="alert">Incorrect Username and/or Password</div>'
-
+            print 'all good'
             username = None
             password = None
             try:
@@ -40,7 +40,7 @@ class Login(PageBase):
                 self.setSessionVar('username', username)
                 self.return_vars['auth_error'] = None
                 redirect_url = '/%s' % '/'.join(Login.getUrlParts(self.request_handler)[2:])
-                self.redirect = Redirect(self.request_handler, redirect_url)
+                self.redirect = Redirect(request_handler=self.request_handler, redirect_url=redirect_url)
 
     def processPage(self):
         if self.redirect:

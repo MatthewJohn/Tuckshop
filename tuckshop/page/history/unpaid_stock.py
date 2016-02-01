@@ -10,7 +10,8 @@ class UnpaidStock(HistoryBase):
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
     URL = '/unpaid-stock'
-    MENU_ORDER = 5
+    SUB_MENU_ORDER = 5
+    SUB_MENU = HistoryBase
 
     def getTransactionHistory(self):
         return sorted(self.getCurrentUserObject().getUnpaidTransactions(), key=lambda x: x.timestamp)

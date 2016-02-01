@@ -2,7 +2,6 @@
 {% block content %}
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
-                            {{ page_object.getHistoryMenu() }}
                                 {% if transaction_history %}
                                 <table class="table">
                                     {% for stock_payement_transaction in transaction_history %}

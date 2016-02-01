@@ -13,7 +13,8 @@ from tuckshop.page.history.stock import Stock as StockHistory
 from tuckshop.page.history.unpaid_stock import UnpaidStock
 from tuckshop.page.history.shared_accounts import SharedAccounts as SharedAccountsHistory
 from tuckshop.page.stock import Stock
-from tuckshop.page.admin import Admin
+from tuckshop.page.admin.admin import Admin
+from tuckshop.page.admin.permission import Permission
 from tuckshop.page.float import Float
 from tuckshop.page.item_image import ItemImage
 
@@ -52,6 +53,8 @@ class Factory(object):
             page_object = Stock(request_handler)
         elif name == 'admin':
             page_object = Admin(request_handler)
+        elif name == 'permission':
+            page_object = Permission(request_handler)
         elif name == 'float':
             page_object = Float(request_handler)
         elif name == 'favicon.ico':
@@ -64,7 +67,7 @@ class Factory(object):
         if page_object.requiresLogin():
             # If page requires login, redirect to login page
             redirect_url = Login.getLoginUrl(request_handler)
-            page_object = Redirect(request_handler, redirect_url)
+            page_object = Redirect(redirect_url=redirect_url, request_handler=request_handler)
         elif page_object.requiresPermission():
             page_object = NotFound(request_handler)
 

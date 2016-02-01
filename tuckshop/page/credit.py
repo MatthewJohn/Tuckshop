@@ -12,6 +12,8 @@ class Credit(PageBase):
     TEMPLATE = 'credit'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = None
+    MENU_ORDER = 1
+    URL = '/credit'
 
     def processPage(self):
         """Set variables for displaying the credit page"""
