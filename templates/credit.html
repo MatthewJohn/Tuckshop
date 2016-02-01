@@ -1,5 +1,9 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <script>
+                    shared_users_json = '{{ shared_user_data }}';
+                    var shared_users = JSON.parse(shared_users_json);
+                    </script>
                     <script src="/js/credit-search.js"></script>
                     <script src="/js/bootstrap-dialog.js"></script>
                     <script src="/js/credit-dialog.js"></script>
@@ -27,7 +31,7 @@
                                     <div class="caption">
                                         <form id="purchase-{{ item.id }}" action="/credit" method="post" onsubmit="return purchaseItem(event);">
                                             <input type="hidden" name="action" value="pay" />
-                                            <input type="hidden" name="item_id" value="{{ item.id }}" />
+                                            <input type="hidden" class="item_id" name="item_id" value="{{ item.id }}" />
                                             <input class="sale_price_string" type="hidden" name="sale_price_string" value="{{ item.getSalePriceString() }}" />
                                             <input type="hidden" name="sale_price" value="{{ item.getSalePrice() }}" />
                                             <h3 class="item_name">{{ item.name }}</h3>
