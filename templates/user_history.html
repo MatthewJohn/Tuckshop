@@ -1,7 +1,22 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <script>
+                    function updateUser(event)
+                    {
+                        uid = event.target.value;
+                        window.location.href = '/user-history/' + uid;
+                    }
+                    </script>
                     <div class="row" id="central">
                         <div class="col-md-12 position-central">
+                        {% if not user %}<b>Please select a user below...</b>{% endif %}
+                        <div style="margin: 20px">
+                            User: <select onchange="updateUser(event)">
+                            {% for select_user in users %}
+                                <option value="{{ select_user.uid }}"{% if user and select_user.uid == user.uid %} selected{% endif %}>{{ select_user.uid }}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
                             {% if user %}
                             <table class="table">
                                 <tr><th>Date/Time</th><th>Item</th><th>Amount</th><th>Balance</th></tr>
