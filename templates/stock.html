@@ -11,12 +11,12 @@
                             select.options.remove(i);
                         }
 
-                        var option = document.createElement("option");
-                        option.text = "None";
-                        option.value = '["0"]';
-                        select.add(option);
                         if (latest_transactions[item_id].length > 0)
                         {
+                            var option = document.createElement("option");
+                            option.text = "Select...";
+                            option.value = '["0"]';
+                            select.add(option);
                             latest_transactions[item_id].forEach(function(element, index, array){
                                 var option = document.createElement("option");
                                 option.text = "Q: " + element[1] + ", C: \u00A3" + element[2] + ", SP: " + element[3] + "p, " + element[4];
@@ -27,6 +27,10 @@
                         }
                         else
                         {
+                            var option = document.createElement("option");
+                            option.text = "None";
+                            option.value = '["0"]';
+                            select.add(option);
                             select.disabled = true;
                         }
                     }
@@ -159,7 +163,7 @@
                                     <label class="col-md-4 control-label" for="description_input">Description</label>  
                                     <div class="col-md-6">
                                         <input id="description_input" name="description" placeholder="Description..." class="form-control input-md" type="text">
-                                        <span class="help-block">Enter description to add to recent transactions</span>  
+                                        <span class="help-block">Enter description to add to common transactions</span>  
                                     </div>
                                 </div>
 
