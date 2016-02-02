@@ -19,7 +19,7 @@ class Admin(AdminBase):
     URL = '/admin'
 
     def processPage(self):
-        self.return_vars['users'] = User.objects.all()
+        self.return_vars['users'] = User.objects.all().order_by('uid')
         self.return_vars['unpaid_users'] = []
         for user in User.objects.all():
             if len(user.getUnpaidTransactions()):
