@@ -78,9 +78,9 @@ class PageBase(object):
 
     def getReturnVars(self):
         return_vars_key = 'return_vars'
-        if self.getSessionVar(return_vars_key):
+        if self.getSessionVar(return_vars_key) and self.getSessionVar(return_vars_key) != 'unset':
             self.return_vars = json.loads(self.getSessionVar(return_vars_key))
-            self.deleteSessionVar(return_vars_key)
+            self.setSessionVar(return_vars_key, 'unset')
 
         else:
             self.return_vars = {
