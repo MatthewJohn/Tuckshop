@@ -109,7 +109,7 @@ def createTestItem(item_name, inventory_transactions=[],
 
     # Add transaction objects to add sales
     for transaction in transactions:
-        user.removeCredit(inventory=inventory_object)
+        user.removeCredit(inventory=inventory_object, author=user, affect_float=False)
 
     return inventory_object
 

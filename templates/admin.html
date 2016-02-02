@@ -17,8 +17,8 @@
                                         <td>{{ user.getCreditString() }}</td>
                                         <td>
                                             <div class="input-group">
-                                                <input type="text" class="form-control input-sm" id="credit_change_amount_{{ user.uid }}" name="amount" placeholder="60" size="4"/>
-                                                <div class="input-group-addon">p</div>
+                                                <div class="input-group-addon">&pound;</div>
+                                                <input type="text" class="form-control input-sm" id="credit_change_amount_{{ user.uid }}" name="amount" placeholder="10" size="4" />
                                             </div>
                                         </td>
                                         <td>
@@ -70,7 +70,7 @@
                                         <span for="pay_amount_input">Amount to Pay</span>
                                         <div class="input-group">
                                             <div class="input-group-addon">&pound;</div>
-                                            <input type="text" class="form-control" name="amount" id="pay_amount_{{ user.uid }}" placeholder="10.00" />
+                                            <input type="text" class="form-control" name="amount" id="pay_amount_{{ user.uid }}" placeholder="10.00" required />
                                         </div>
                                     </div>
                                 </form>

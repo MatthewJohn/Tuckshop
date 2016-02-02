@@ -22,6 +22,8 @@ class CreditTests(TestBase):
         suite.addTest(CreditTests('test_enable_custom'))
         suite.addTest(CreditTests('test_disable_custom'))
         suite.addTest(CreditTests('test_credit_items_ordering'))
+        suite.addTest(CreditTests('test_purchase_price_change'))
+        suite.addTest(CreditTests('test_invalid_amount_values'))
         return suite
 
     def test_list_items(self):
@@ -72,9 +74,12 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[1].pk
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': self.test_items[1].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that the user has been debitted
         self.user_object.refresh_from_db()
@@ -89,9 +94,12 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[1].pk
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': self.test_items[1].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         self.user_object.refresh_from_db()
         self.assertEqual(self.user_object.getCurrentCredit(), -448)
@@ -106,9 +114,12 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[1].pk
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': 12
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Assert that an error was displayed to the user and credit has not changed
         self.assertEqual(credit_page.return_vars['error'], 'There are no items in stock')
@@ -122,9 +133,12 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': 5
+                                        'item_id': 5,
+                                        'sale_price': 50
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that user's account has not been debitted.
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
@@ -138,9 +152,12 @@ class CreditTests(TestBase):
                                     headers={'Cookie': self.cookie},
                                     post_variables={
                                         'action': 'pay',
-                                        'item_id': self.test_items[2].pk
+                                        'item_id': self.test_items[2].pk,
+                                        'sale_price': self.test_items[2].getSalePrice()
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that user's account has not been debitted.
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
@@ -175,18 +192,20 @@ class CreditTests(TestBase):
         self.assertEqual(credit_page.return_vars['enable_custom'], True)
 
         # Ensure that the custom box is present on the page
-        self.assertTrue('<h3 class=\'custom-amount\'>Custom Amount</h3>' in
+        self.assertTrue('<h3 class=\'custom-amount\'>Custom Payment/ Donation</h3>' in
                         credit_page.request_handler.output)
 
         # Attempt to make a custom payment using the credit page
         credit_page = getPageObject(Credit, path='', unittest=self,
                                     headers={'Cookie': self.cookie},
                                     post_variables={
-                                        'action': 'pay',
+                                        'action': 'pay_custom',
                                         'amount': '120',
                                         'description': ''
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that the request returned an error and no money was removed from the user
         self.assertEqual(credit_page.return_vars['error'], None)
@@ -206,22 +225,24 @@ class CreditTests(TestBase):
         self.assertEqual(credit_page.return_vars['enable_custom'], False)
 
         # Ensure that the custom box is not present on the page
-        self.assertFalse('<h3 class=\'custom-amount\'>Custom Amount</h3>' in
+        self.assertFalse('<h3 class=\'custom-amount\'>Custom Payment/ Donation</h3>' in
                          credit_page.request_handler.output)
 
         # Attempt to make a custom payment using the credit page
         credit_page = getPageObject(Credit, path='', unittest=self,
                                     headers={'Cookie': self.cookie},
                                     post_variables={
-                                        'action': 'pay',
+                                        'action': 'pay_custom',
                                         'amount': '120',
                                         'description': ''
                                     })
         credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
 
         # Ensure that the request returned an error and no money was removed from the user
-        self.assertEqual(credit_page.return_vars['error'], 'Custom payment is disabled')
-        self.assertTrue('Custom payment is disabled' in credit_page.request_handler.output)
+        self.assertEqual(credit_page.return_vars['error'], 'Error (PD0105): action does not conform')
+        self.assertTrue('Error (PD0105): action does not conform' in credit_page.request_handler.output)
         self.assertEqual(self.user_object.getCurrentCredit(), -124)
 
 
@@ -266,3 +287,50 @@ class CreditTests(TestBase):
 
         # Assert all items were found
         self.assertEqual(len(expected_order), 0)
+
+    def test_purchase_price_change(self):
+        """Attempts to purchase an item where the price
+           displayed on the page differs from the price
+           that will be charged"""
+        original_quantity = self.test_items[1].getQuantityRemaining()
+
+        # Purchase an item
+        credit_page = getPageObject(Credit, path='', unittest=self,
+                                    headers={'Cookie': self.cookie},
+                                    post_variables={
+                                        'action': 'pay',
+                                        'item_id': self.test_items[1].pk,
+                                        'sale_price': 98
+                                    })
+        credit_page.processRequest(post_request=True)
+        credit_page = getPageObject(Credit, path='', unittest=self, headers={'Cookie': self.cookie})
+        credit_page.processRequest(post_request=False)
+
+        # Ensure that user's account has not been debitted.
+        self.assertEqual(self.user_object.getCurrentCredit(), -124)
+
+        # Ensure error is displayed to user 
+        self.assertEqual(credit_page.return_vars['error'],
+                         ('Purchase cancelled - '
+                          'Price has changed from 98p to &pound;1.24'))
+
+        # Ensure item quantity has not changed
+        self.test_items[2].refresh_from_db()
+        self.assertEqual(self.test_items[2].getQuantityRemaining(), original_quantity)
+
+    def test_invalid_amount_values(self):
+        """Attempts to perform a custom payment
+           using invalid amounts"""
+        invalid_values = [0, -12, 'a', '', '12p', '&pound;1', '.12', 0.1, 3.1, -0.1, -1, '@']
+
+        current_transactions = len(Transaction.objects.all())
+        for value in invalid_values:
+            # Attempt to make a custom payment using the credit page
+            credit_page = getPageObject(Credit, path='', unittest=self,
+                                        headers={'Cookie': self.cookie},
+                                        post_variables={
+                                            'action': 'pay_custom',
+                                            'amount': invalid_values,
+                                            'description': ''
+                                        })
+            self.assertEqual(current_transactions, len(Transaction.objects.all()))

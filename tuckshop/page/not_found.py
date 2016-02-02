@@ -4,7 +4,7 @@ class NotFound(PageBase):
     NAME = '404'
     TEMPLATE = '404'
     REQUIRES_AUTHENTICATION = False
-    ADMIN_PAGE = False
+    PERMISSION = None
 
 
     def __init__(self, *args, **kwargs):

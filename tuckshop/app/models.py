@@ -1,20 +1,24 @@
 from django.db import models
 from enum import Enum
-
-from tuckshop.core.config import Config
-from tuckshop.core.tuckshop_exception import TuckshopException
-from tuckshop.core.redis_connection import RedisConnection
-from tuckshop.core.utils import getMoneyString
 import ldap
 from decimal import Decimal
 import datetime
 from os import environ
 
-# Create your models here.
+from tuckshop.core.config import Config
+from tuckshop.core.tuckshop_exception import TuckshopException
+from tuckshop.core.redis_connection import RedisConnection
+from tuckshop.core.utils import getMoneyString
+from tuckshop.core.image import Image
+
+
 class User(models.Model):
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
+    permissions = models.IntegerField(default=0)
     timestamp = models.DateTimeField(auto_now_add=True)
+    shared = models.BooleanField(default=False)
+    shared_name = models.CharField(max_length=255, null=True)
 
     current_credit_cache_key = 'User_%s_credit'
 
@@ -22,7 +26,9 @@ class User(models.Model):
 
         user_object = super(User, self).__init__(*args, **kwargs)
 
-        if not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
+        if self.shared:
+            self.dispaly_name = self.shared_name
+        elif not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
             # Obtain information from LDAP
             ldap_obj = ldap.initialize('ldap://%s:389' % Config.LDAP_SERVER())
             dn = 'uid=%s,ou=People,dc=example,dc=com' % self.uid
@@ -179,13 +185,14 @@ class User(models.Model):
             balance = int(RedisConnection.get(User.current_credit_cache_key % self.id))
         return balance
 
-    def addCredit(self, amount, description=None):
+    def addCredit(self, amount, author, affect_float, description=None):
         amount = int(amount)
         if (amount < 0):
             raise Exception('Cannot use negative number')
         current_credit = self.getCurrentCredit()
         transaction = Transaction(user=self, amount=amount, debit=False, description=description,
-                                  payment_type=Transaction.TransactionType.ADMIN_CHANGE.value)
+                                  payment_type=Transaction.TransactionType.ADMIN_CHANGE.value,
+                                  author=author, affect_float=affect_float)
         transaction.save()
 
         # Update credit cache
@@ -194,8 +201,10 @@ class User(models.Model):
                             current_credit)
         return current_credit
 
-    def removeCredit(self, amount=None, inventory=None,
-                     description=None, admin_payment=False):
+    def removeCredit(self, affect_float, amount=None, inventory=None, description=None,
+                     verify_price=None, admin_payment=False, author=None):
+        if author is None:
+            raise TuckshopException('Author must be specified for credit changes')
         if (inventory and inventory.getQuantityRemaining() <= 0):
             raise TuckshopException('There are no items in stock')
 
@@ -203,7 +212,7 @@ class User(models.Model):
             raise TuckshopException('Item is archived')
 
         current_credit = self.getCurrentCredit()
-        transaction = Transaction(user=self, debit=True)
+        transaction = Transaction(user=self, debit=True, author=author)
 
         if admin_payment:
             payment_type = Transaction.TransactionType.ADMIN_CHANGE.value
@@ -221,6 +230,13 @@ class User(models.Model):
             if (not amount):
                 amount = inventory_transaction.sale_price
 
+                # If a verification price has been supplied,
+                # ensure the price being paid for the item matches.
+                if verify_price is not None and amount != verify_price:
+                    raise TuckshopException('Purchase cancelled - Price has changed from %s to %s' %
+                                            (getMoneyString(verify_price, include_sign=False),
+                                             getMoneyString(amount, include_sign=False)))
+
         elif not amount:
             raise TuckshopException('Must pass amount or inventory')
 
@@ -231,6 +247,7 @@ class User(models.Model):
         transaction.payment_type = payment_type
         transaction.amount = amount
         transaction.description = description
+        transaction.affect_float = affect_float
         transaction.save()
 
         # Update credit cache
@@ -243,20 +260,66 @@ class User(models.Model):
     def getCreditString(self):
         return getMoneyString(self.getCurrentCredit())
 
-    def getTransactionHistory(self, date_from=None, date_to=None):
+    def getTransactionHistory(self, date_from=None, date_to=None, author=False):
+        parameters = {}
         if date_from is None:
-            date_from = datetime.datetime.fromtimestamp(0)
+            parameters['timestamp__gt'] = datetime.datetime.fromtimestamp(0)
 
         if date_to is None:
-            date_to = datetime.datetime.now()
+            parameters['timestamp__lt'] = datetime.datetime.now()
 
-        return Transaction.objects.filter(user=self, timestamp__gt=date_from, timestamp__lt=date_to)
+        transactions = Transaction.objects.all()
+
+        if author:
+            parameters['author'] = self
+            parameters['user__shared'] = True
+            transactions = transactions.exclude(user=self)
+        else:
+            parameters['user'] = self
+
+        return transactions.filter(**parameters)
 
     def getStockPayments(self):
         return StockPayment.objects.filter(user=self)
 
     def getStockPaymentTransactions(self):
         return StockPaymentTransaction.objects.filter(user=self)
+
+    @property
+    def isAdmin(self):
+        return self.admin
+
+    @property
+    def _permissionValue(self):
+        return self.permissions
+
+    def setAdmin(self):
+        self.admin = True
+        self.save()
+
+    def removeAdmin(self):
+        self.admin = False
+        self.save()
+
+    def addPermission(self, permission):
+        permission_bit = 1 << permission.value
+        self.permissions |= permission_bit
+        self.save()
+
+    def removePermission(self, permission):
+        permission_bit = 1 << permission.value
+        self.permissions &= ~permission_bit
+        self.save()
+
+    def checkPermission(self, permission):
+        """Determines if the user has a specified permission"""
+        # If the user is an admin, return True -
+        # Users can do EVERYTHING
+        if self.isAdmin:
+            return True
+
+        permission_bit = 1 << permission.value
+        return bool(self._permissionValue & permission_bit)
 
 
 class Inventory(models.Model):
@@ -335,9 +398,8 @@ class Inventory(models.Model):
 
         return inventory_transactions
 
-    def getImageUrl(self):
-        # Return the image URL, if it exists. Else, return a default image
-        return self.image_url if self.image_url else 'http://www.monibazar.com/images/noimage.png'
+    def getImageObject(self):
+        return Image(self)
 
     @staticmethod
     def getAvailableItems():
@@ -406,7 +468,7 @@ class Inventory(models.Model):
 
         if (len(inventory_transaction_list) == 0):
             if (self.getLatestSalePrice()):
-                return self.getLatestSalePrice()
+                return getMoneyString(self.getLatestSalePrice(), include_sign=False)
             else:
                 return 'N/A'
         elif (len(inventory_transaction_list) == 1):
@@ -502,14 +564,45 @@ class InventoryTransaction(models.Model):
     def getCostRemainingString(self):
         return getMoneyString(self.getRemainingCost(), include_sign=False)
 
+    def updateSalePrice(self, new_sale_price):
+        if self.getQuantitySold():
+            # If any of the items have been sold, create a new transaction for the
+            # items remaining
+            self.quantity -= self.getQuantityRemaining()
+            self.save()
+
+            # Create a new inventory transaction for the new item
+            new_inventory_transaction = InventoryTransaction.objects.get(pk=self.pk)
+            new_inventory_transaction.pk = None
+            # Update the quantity to reflect the quantity of items being
+            # updated
+            new_inventory_transaction.quantity = self.getQuantityRemaining()
+            new_inventory_transaction.sale_price = new_sale_price
+
+            # Set the cost to 0, as the cost is captured in the original
+            # inventory transaction
+            new_inventory_transaction.cost = 0
+            new_inventory_transaction.save()
+
+            # Update the timestamp of the new inventory transaction, as it will
+            # default to the current time when created
+            new_inventory_transaction.timestamp = self.timestamp
+            new_inventory_transaction.save()
+        else:
+            # Else Simply update the transaction
+            self.sale_price = new_sale_price
+            self.save()
+
 
 class Transaction(models.Model):
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, related_name='transaction_user')
     amount = models.IntegerField()
     debit = models.BooleanField(default=True)
     inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
     payment_type = models.IntegerField()
     description = models.CharField(max_length=255, null=True)
+    author = models.ForeignKey(User, related_name='transaction_author')
+    affect_float = models.BooleanField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
 
@@ -617,3 +710,12 @@ class StockPayment(models.Model):
 class Token(models.Model):
     user = models.ForeignKey(User)
     token_value = models.CharField(max_length=100)
+
+class Change(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    object_type = models.CharField(max_length=255)
+    object_id = models.IntegerField()
+    user = models.ForeignKey(User)
+    changed_field = models.CharField(max_length=255)
+    previous_value = models.CharField(max_length=255)
+    new_value = models.CharField(max_length=255)
