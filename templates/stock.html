@@ -46,6 +46,11 @@
                         var cost_each = document.getElementById("cost_input_each");
                         var description = document.getElementById("description_input");
                         var inv_dropdown = document.getElementById("inv_dropdown");
+                        cost_each.value = "";
+                        cost_total.disabled = false;
+                        cost_each.disabled = true;
+                        total_cost_radio.checked = true;
+
                         if (common_id == "0")
                         {
                             quantity.value = "";
@@ -56,12 +61,26 @@
                         }
                         else
                         {
-                            total_cost_radio.checked = true;
                             cost_each.value = "";
                             quantity.value = common_data[1];
                             cost_total.value = common_data[2];
                             sale_price.value = common_data[3];
                             description.value = common_data[4];
+                        }
+                    }
+                    function disableCostType(type)
+                    {
+                        if (type == 'each')
+                        {
+                            document.getElementById('cost_input_total').disabled = true;
+                            document.getElementById('cost_input_total').value = '';
+                            document.getElementById('cost_input_each').disabled = false;
+                        }
+                        else
+                        {
+                            document.getElementById('cost_input_each').disabled = true;
+                            document.getElementById('cost_input_each').value = '';
+                            document.getElementById('cost_input_total').disabled = false;
                         }
                     }
                     </script>
@@ -114,7 +133,7 @@
                                     <div class="col-md-3">
                                         <div class="input-group">
                                             <span class="input-group-addon">     
-                                                <input checked="checked" name="cost_type" id="total_cost_radio" value="total" type="radio"> &pound;
+                                                <input checked="checked" name="cost_type" id="total_cost_radio" onclick="disableCostType('total')" value="total" type="radio"> &pound;
                                             </span>
                                             <input id="cost_input_total" name="cost_total" class="form-control" placeholder="1.50" type="text">
                                         </div>
@@ -123,13 +142,13 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="col-md-4 control-label" for="cost_input_total">Cost per Item</label>
+                                    <label class="col-md-4 control-label" for="cost_input_each">Cost per Item</label>
                                     <div class="col-md-3">
                                         <div class="input-group">
                                             <span class="input-group-addon">     
-                                                <input checked="checked" name="cost_type" id="each_cost_radio" value="each" type="radio">
+                                                <input name="cost_type" id="each_cost_radio" onclick="disableCostType('each')" value="each" type="radio">
                                             </span>
-                                            <input id="cost_input_each" name="cost_each" class="form-control" placeholder="30" type="text">
+                                            <input id="cost_input_each" name="cost_each" class="form-control" placeholder="30" disabled="disabled" type="text">
                                             <span class="input-group-addon">p</span>
                                         </div>
                                     <p class="help-block">Provide the cost price of each item</p>
