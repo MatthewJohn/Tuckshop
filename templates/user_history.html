@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block content %}
+                    <script>
+                    function updateUser(event)
+                    {
+                        uid = event.target.value;
+                        window.location.href = '/user-history/' + uid;
+                    }
+                    </script>
+                    <div class="row" id="central">
+                        <div class="col-md-12 position-central">
+                        {% if not user %}<b>Please select a user below...</b>{% endif %}
+                        <div style="margin: 20px">
+                            User: <select onchange="updateUser(event)">
+                            {% for select_user in users %}
+                                <option value="{{ select_user.uid }}"{% if user and select_user.uid == user.uid %} selected{% endif %}>{{ select_user.uid }}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
+                            {% if user %}
+                            <table class="table">
+                                <tr><th>Date/Time</th><th>Item</th><th>Amount</th><th>Balance</th></tr>
+                                    {% if transaction_history %}
+                                        {% for transaction in transaction_history %}
+                                            <tr>
+                                                <td>{{ transaction.toTimeString() }}</td>
+                                                <td>{% if transaction.description %}{{ transaction.description }}{% elif transaction.inventory_transaction %}{{ transaction.inventory_transaction.inventory.name }}{% endif %}</td>
+                                                <td>{{ transaction.getAmountString() }}</td>
+                                                <td>{{ transaction.getCurrentCreditString() }}</td>
+                                            </tr>
+                                    {% endfor %}
+                                </table>
+                            {% else %}
+                                </table>
+                                <div class="alert alert-info" role="alert">There are no transactions available...</div>
+                            {% endif %}
+                            {% if page_data %}
+                                <nav>
+                                  <ul class="pagination">
+                                    {% for page_info in page_data %}
+                                        <li class="{{ page_info[0] }}"><a href="{{ page_info[1] }}">{{ page_info[2] }}</a></li>
+                                    {% endfor %}
+                                  </ul>
+                                </nav>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+{% endblock %}
