@@ -1,12 +1,16 @@
 {% extends "layout.html" %}
 {% block content %}
+                    <script>
+                    shared_users_json = '{{ shared_user_data }}';
+                    var shared_users = JSON.parse(shared_users_json);
+                    </script>
                     <script src="/js/credit-search.js"></script>
                     <script src="/js/bootstrap-dialog.js"></script>
                     <script src="/js/credit-dialog.js"></script>
 
                     <div class="row" id="central">
-                        <div class="col-md-8 col-sm-12 col-xs-12">
-                            <div class="col-md-8">
+                        <div class="col-md-12 col-sm-12 col-xs-12">
+                            <div class="col-md-9">
                                 <h1>{{ app_name }}</h1>
                                 <div id="current-credit">
                                     <h4>Welcome to the tuck shop, {{ user.display_name }}.</h4>
@@ -14,8 +18,9 @@
                                     <h3>You currently have {{ user.getCreditString() }} in your account.</h3>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-4 col-sm-12 col-xs-12" style="margin-top: 40px; float: right;" onkeyup="updateSearch(event)" >
-                                <input id="search_input" class="form-control" placeholder="Search..."/>
+                            <div class="col-lg-3 col-md-3 hidden-sm hidden-xs" style="height:130px"></div>
+                            <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12" onkeyup="updateSearch(event)" >
+                                <input id="search_input" class="form-control" style="margin-bottom: 10px" placeholder="Search..."/>
                             </div>
                         </div>
 
@@ -23,11 +28,11 @@
                             {% for item in inventory %}
                             <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 search_item">
                                 <div class="thumbnail">
-                                    <img src="{{ item.getImageUrl() }}" alt="{{ item.name }}">
+                                    <img src="{{ item.getImageObject().getImageUrl() }}" alt="{{ item.name }}">
                                     <div class="caption">
                                         <form id="purchase-{{ item.id }}" action="/credit" method="post" onsubmit="return purchaseItem(event);">
                                             <input type="hidden" name="action" value="pay" />
-                                            <input type="hidden" name="item_id" value="{{ item.id }}" />
+                                            <input type="hidden" class="item_id" name="item_id" value="{{ item.id }}" />
                                             <input class="sale_price_string" type="hidden" name="sale_price_string" value="{{ item.getSalePriceString() }}" />
                                             <input type="hidden" name="sale_price" value="{{ item.getSalePrice() }}" />
                                             <h3 class="item_name">{{ item.name }}</h3>
@@ -51,14 +56,14 @@
                             <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
                                 <div class="thumbnail">
                                     <div class="caption">
-                                        <h3 class='custom-amount'>Custom Amount</h3>
+                                        <h3 class='custom-amount'>Custom Payment/ Donation</h3>
                                         <form action="/credit" id="purchase-custom" method="post" onsubmit="return customPurchase(event);">
-                                            <input type="hidden" name="action" value="pay" />
+                                            <input type="hidden" name="action" value="pay_custom" />
                                             <div class="input-group">
                                                 <input type="text" class="form-control custom-amount-input" name="amount" placeholder="30" required>
                                                 <div class="input-group-addon">p</div>
                                             </div>
-                                            <input type="text" class="form-control custom-amount-description" id="description" name="description" placeholder="Description..." />
+                                            <input type="text" class="form-control custom-amount-description" id="description" name="description" placeholder="Description..." required />
                                             <div><button type="submit" id="custom-payment-submit" class="btn btn-default">Pay</button></div>
                                         </form>
                                     </div>

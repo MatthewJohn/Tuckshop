@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+                    <div class="row" id="central position-central">
+                        <div class="col-md-12">
+                            <h2>Permissions</h2>
+                            <table class="table">
+                                <tr><th>Username</th><th>Admin</th><th>View Float</th><th>Review Shared Accounts</th><th></th></tr>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.uid }}</td>
+                                    <td><input type="checkbox" value="1" name="ADMIN" form="update_permissions_{{ user.uid }}" {% if user.isAdmin %}checked{% endif %}/></td>
+                                    <td><input type="checkbox" value="1" name="FLOAT_ACCESS" form="update_permissions_{{ user.uid }}" {% if user.checkPermission(permissions['FLOAT_ACCESS']) %}checked{% endif %}/></td>
+                                    <td><input type="checkbox" value="1" name="REVIEW_SHARED_ACCOUNTS" form="update_permissions_{{ user.uid }}"  {% if user.checkPermission(permissions['REVIEW_SHARED_ACCOUNTS']) %}checked{% endif %}/></td>
+                                    <td><input type="submit" form="update_permissions_{{ user.uid }}" class="btn btn-warning btn-xs" value="update" /></td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                            {% for user in users %}
+                            <form action="" method="post" id="update_permissions_{{ user.uid }}">
+                                <input type="hidden" name="action" value="update" />
+                                <input type="hidden" name="uid" value="{{ user.uid }}" />
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+{% endblock %}

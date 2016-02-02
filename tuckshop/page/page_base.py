@@ -8,6 +8,7 @@ import math
 from mimetypes import read_mime_types
 import time
 import os
+import json
 import re
 import traceback
 from django.db import transaction
@@ -16,6 +17,8 @@ from tuckshop.core.config import Config
 from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.app.models import User
+from tuckshop.core.permission import Permission
+
 
 class PageDoesNotExist(TuckshopException):
     pass
@@ -47,7 +50,12 @@ class PageBase(object):
 
     CONTENT_TYPE = 'text/html'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = True
+    PERMISSION = Permission.ADMIN
+    POST_URL = ''
+    SUB_MENU = None
+    MENU_ORDER = None
+    MENU_NAME = None
+    SUB_MENU_ORDER = None
 
     @staticmethod
     def getUrlBase(request_handler):
@@ -61,18 +69,27 @@ class PageBase(object):
     def __init__(self, request_handler):
         self.request_handler = request_handler
         self.post_vars = {}
-        self.return_vars = {
-            'error': None,
-            'warning': None,
-            'info': None,
-            'app_name': Config.APP_NAME(),
-            'page_name': self.name,
-            'page_object': self
-        }
         self.headers = {}
         self.response_code = 200
         self.session_id = None
         self.getSessionId()
+        self.getReturnVars()
+        self.post_redirect_url_custom = None
+
+    def getReturnVars(self):
+        return_vars_key = 'return_vars'
+        if self.getSessionVar(return_vars_key):
+            self.return_vars = json.loads(self.getSessionVar(return_vars_key))
+            self.deleteSessionVar(return_vars_key)
+
+        else:
+            self.return_vars = {
+                'error': None,
+                'warning': None,
+                'info': None,
+                'app_name': Config.APP_NAME(),
+                'page_name': self.name
+            }
 
     @property
     def name(self):
@@ -83,8 +100,8 @@ class PageBase(object):
         return self.TEMPLATE
 
     @property
-    def isAdminPage(self):
-        return self.ADMIN_PAGE
+    def permission(self):
+        return self.PERMISSION
 
     @property
     def requiresAuthentication(self):
@@ -94,12 +111,25 @@ class PageBase(object):
     def contentType(self):
         return self.CONTENT_TYPE
 
+    @property
+    def menuName(self):
+        return self.MENU_NAME if self.MENU_NAME else self.NAME
+
+    @property
+    def post_redirect_url(self):
+        return self.post_redirect_url_custom or self.POST_URL
+
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
-                        special=[], message=None):
+                        special=[], message=None, max_length=None):
         """Performs various checks of post vars and returns the value if checks pass"""
         message = message if message else "%s does not conform" % name
         message = "Error (%%s): %s" % message
+
+        # If max-length has not been specified and the variable is a string,
+        # default to limit to 255 characters
+        if var_type is str:
+            max_length = 255
 
         # Check if variable is in post data
         if name not in self.post_vars:
@@ -110,6 +140,11 @@ class PageBase(object):
 
         # Obtain the value from post data
         value = self.post_vars[name]
+        if var_type is str:
+            # If the var_type is string, convert unicode characters
+            value = str(self.post_vars[name].decode('iso-8859-1').encode('utf8'))
+        else:
+            value = self.post_vars[name]
 
         # If a type has not been specified and a 'special' case has been,
         # set the var_type to an appropriate value.
@@ -166,7 +201,53 @@ class PageBase(object):
         if VariableVerificationTypes.NOT_EMPTY in special and value == '':
             raise InvalidPostVariable(message % 'PD0110')
 
+        if max_length:
+            if len(value) > max_length:
+                raise TuckshopException(message % 'PDO0111')
+
         return value
+
+    def getSubMenu(self):
+        if self.SUB_MENU:
+            rows = []
+            template = """<ul class="nav nav-tabs">%s</ul>"""
+            row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
+            for page_class in sorted(self.SUB_MENU.__subclasses__(), key=lambda x: x.SUB_MENU_ORDER):
+                page_object = page_class(self.request_handler)
+                if not page_object.requiresPermission():
+                    is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
+                    rows.append(row_template % (is_active, page_object.URL, page_object.NAME))
+
+            return template % ''.join(rows)
+        else:
+            return ''
+
+    def getMenu(self):
+        rows = []
+        template = """<ul class="nav nav-pills nav-justified">%s</ul>"""
+        row_template = """<li role="presentation"%s><a href="%s">%s</a></li>"""
+        if self.isLoggedIn():
+            for page_class in sorted(PageBase.all_subclasses(PageBase), key=lambda x: x.MENU_ORDER):
+                if page_class.MENU_ORDER:
+                    page_object = page_class(self.request_handler)
+
+                    if not page_object.requiresPermission():
+                        is_active = ' class="active"' if (self.__class__.__name__ == page_class.__name__) else ''
+                        rows.append(row_template % (is_active, page_object.URL, page_object.menuName))
+        else:
+            rows.append(row_template % ('', '/login', 'Login'))
+
+        return template % ''.join(rows)
+
+    @staticmethod
+    def all_subclasses(cls):
+        all_subclasses = []
+
+        for subclass in cls.__subclasses__():
+            all_subclasses.append(subclass)
+            all_subclasses.extend(PageBase.all_subclasses(subclass))
+
+        return all_subclasses
 
     def isLoggedIn(self):
         if (self.getSessionVar('username')):
@@ -194,16 +275,16 @@ class PageBase(object):
         else:
             return False
     
-    def requiresAdminAccess(self):
+    def requiresPermission(self):
         """Determines if the page requies admin permissions and
            whether the user has admin permissions"""
-        if self.isAdminPage and not self.getCurrentUserObject().admin:
+        if self.permission and not self.getCurrentUserObject().checkPermission(self.permission):
             return True
         else:
             return False
 
     def checkAuthentication(self):
-        if self.requiresLogin() or self.requiresAdminAccess():
+        if self.requiresLogin() or self.requiresPermission():
             raise Exception('Attempting to process page without required permissions')
 
     def processHeaders(self):
@@ -224,7 +305,8 @@ class PageBase(object):
         env = Environment()
         env.loader = FileSystemLoader('./templates/')
         template = env.get_template('%s.html' % self.template)
-        self.request_handler.wfile.write(template.render(**self.return_vars))
+        self.return_vars['page_object'] = self
+        self.request_handler.wfile.write(unicode(template.render(**self.return_vars)).encode('latin1'))
 
     def attemptFunction(self, fun):
         try:
@@ -257,19 +339,31 @@ class PageBase(object):
             # transaction, to ENSURE data entegrity
             with transaction.atomic():
                 self.attemptFunction(self.processPost)
+                self.postRedirect()
 
-        # Process page to determine page content
-        self.attemptFunction(self.processPage)
+        else:
+            # Process page to determine page content
+            self.attemptFunction(self.processPage)
 
-        # Process template
+        # Process headers
         self.processHeaders()
-        self.processTemplate()
+
+        if not post_request:
+            # Process template
+            self.processTemplate()
 
     def processPage(self):
         raise NotImplementedError
 
     def processPost(self):
         raise NotImplementedError
+
+    def postRedirect(self):
+        """Perform redirect after post request"""
+        # Convert return vars to session variables
+        self.setSessionVar('return_vars', json.dumps(self.return_vars))
+        self.response_code = 302
+        self.headers['Location'] = self.post_redirect_url
 
     def getPaginationData(self, current_page, total_pages, url_template):
         if total_pages <= Config.TOTAL_PAGE_DISPLAY():
@@ -339,6 +433,9 @@ class PageBase(object):
 
     def setSessionVar(self, var, value):
         RedisConnection.hset('session_' + self.getSession(), var, value)
+
+    def deleteSessionVar(self, var):
+        RedisConnection.hdel('session_' + self.getSession(), [var])
 
     def getFile(self, content_type, base_dir, file_name):
         file_name = '%s/%s' % (base_dir, file_name)

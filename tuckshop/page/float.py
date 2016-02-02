@@ -5,13 +5,17 @@ from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.utils import getMoneyString
 from tuckshop.app.models import (InventoryTransaction, StockPayment,
                                  Transaction, User, Inventory)
+from tuckshop.core.permission import Permission
+
 
 class Float(PageBase):
 
     NAME = 'Float'
     TEMPLATE = 'float'
     REQUIRES_AUTHENTICATION = True
-    ADMIN_PAGE = True
+    PERMISSION = Permission.FLOAT_ACCESS
+    MENU_ORDER = 4
+    URL = '/float'
 
     def processPage(self):
         active_inventory_transactions = InventoryTransaction.getActiveTransactions()
@@ -20,16 +24,24 @@ class Float(PageBase):
             if inventory_transaction.inventory not in self.return_vars['active_inventorys']:
                 self.return_vars['active_inventorys'].append(inventory_transaction.inventory)
 
+        stock_value = self.getStockValue()
+        unpaid_stock = self.getUnpaidStock()
+
         float_amount, credit_balance = self.getCurrentFloat()
+
+        # Calculate what float would be if life were perfect
+        float_superficial = float_amount - credit_balance - unpaid_stock + stock_value
+
         self.return_vars['float'] = getMoneyString(float_amount, include_sign=True)
         self.return_vars['credit_balance'] = getMoneyString(credit_balance, include_sign=True, colour_switch=True)
-        self.return_vars['stock_value'] = getMoneyString(self.getStockValue(), include_sign=True)
-        self.return_vars['stock_owed'] = getMoneyString(self.getUnpaidStock(), include_sign=True, colour_switch=True)
+        self.return_vars['stock_value'] = getMoneyString(stock_value, include_sign=True)
+        self.return_vars['stock_owed'] = getMoneyString(unpaid_stock, include_sign=True, colour_switch=True)
+        self.return_vars['float_superficial'] = getMoneyString(float_superficial, include_sign=True)
 
     def processPost(self):
         """There are no post requests handled by the float page"""
         # Obtain common post variables and inventory transaction object
-        action = self.getPostVariable(name='action', possible_values=['update_sale_price', 'update_quantity'])
+        action = self.getPostVariable(name='action', possible_values=['update_sale_price', 'update_quantity', 'update_cost'])
         inventory_transaction_id = self.getPostVariable(name='inventory_transaction_id', var_type=int,
                                                         special=[VariableVerificationTypes.POSITIVE])
         inventory_transaction_object = InventoryTransaction.objects.get(pk=inventory_transaction_id)
@@ -47,33 +59,7 @@ class Float(PageBase):
             old_sale_price = inventory_transaction_object.sale_price
             remaining_quantity = inventory_transaction_object.getQuantityRemaining()
 
-            if inventory_transaction_object.getQuantitySold():
-                # If any of the items have been sold, create a new transaction for the
-                # items remaining
-                inventory_transaction_object.quantity -= remaining_quantity
-                inventory_transaction_object.save()
-
-                # Create a new inventory transaction for the new item
-                new_inventory_transaction = InventoryTransaction.objects.get(pk=inventory_transaction_object.pk)
-                new_inventory_transaction.pk = None
-                # Update the quantity to reflect the quantity of items being
-                # updated
-                new_inventory_transaction.quantity = remaining_quantity
-                new_inventory_transaction.sale_price = new_sale_price
-
-                # Set the cost to 0, as the cost is captured in the original
-                # inventory transaction
-                new_inventory_transaction.cost = 0
-                new_inventory_transaction.save()
-
-                # Update the timestamp of the new inventory transaction, as it will
-                # default to the current time when created
-                new_inventory_transaction.timestamp = inventory_transaction_object.timestamp
-                new_inventory_transaction.save()
-            else:
-                # Else Simply update the transaction
-                inventory_transaction_object.sale_price = new_sale_price
-                inventory_transaction_object.save()
+            inventory_transaction_object.updateSalePrice(new_sale_price)
 
             self.return_vars['info'] = ('Updated sale price of %s items from %sp to %sp' %
                                         (remaining_quantity, old_sale_price,
@@ -98,6 +84,21 @@ class Float(PageBase):
                                         (old_quantity, new_quantity,
                                          inventory_transaction_object.getQuantityRemaining()))
 
+        elif action == 'update_cost':
+            new_cost = self.getPostVariable(name='cost_price', var_type=float, special=[VariableVerificationTypes.FLOAT_MONEY],
+                                            message='Cost price must be a valid amount in pounds, e.g. 1.50')
+            new_cost = int(new_cost * 100)
+            old_cost = inventory_transaction_object.cost
+
+            if new_cost < inventory_transaction_object.getAmountPaid():
+                raise TuckshopException('New Inventory Transaction cost is less than amount that has already been paid')
+
+            inventory_transaction_object.cost = new_cost
+            inventory_transaction_object.save()
+
+            self.return_vars['info'] = 'Updated cost of %s from %s to %s' % (inventory_transaction_object.inventory.name,
+                                                                             getMoneyString(old_cost), getMoneyString(new_cost))
+
 
     def getCurrentFloat(self):
         """Gets the current float - amount of money
@@ -109,13 +110,14 @@ class Float(PageBase):
             float_amount -= stock_payment.amount
 
         # Get the total value of payements for items
-        for transaction in Transaction.objects.filter(debit=True):
-            float_amount += transaction.amount
+        for transaction in Transaction.objects.filter(affect_float=True):
+            if transaction.debit:
+                float_amount -= transaction.amount
+            else:
+                float_amount += transaction.amount
 
         # Adjust float based on user's current credit
         for user in User.objects.all():
-            user_current_credit = user.getCurrentCredit()
-            float_amount += user.getCurrentCredit()
             total_user_balance += user.getCurrentCredit()
 
         return float_amount, total_user_balance
