@@ -263,10 +263,12 @@ class User(models.Model):
     def getTransactionHistory(self, date_from=None, date_to=None, author=False):
         parameters = {}
         if date_from is None:
-            parameters['timestamp__gt'] = datetime.datetime.fromtimestamp(0)
+            date_from = datetime.datetime.fromtimestamp(0)
+        parameters['timestamp__gt'] = date_from
 
         if date_to is None:
-            parameters['timestamp__lt'] = datetime.datetime.now()
+            date_to = datetime.datetime.now()
+        parameters['timestamp__lt'] = date_to
 
         transactions = Transaction.objects.all()
 
