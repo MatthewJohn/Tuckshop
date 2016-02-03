@@ -570,7 +570,8 @@ class InventoryTransaction(models.Model):
         if self.getQuantitySold():
             # If any of the items have been sold, create a new transaction for the
             # items remaining
-            self.quantity -= self.getQuantityRemaining()
+            remaining_quantity = self.getQuantityRemaining()
+            self.quantity -= remaining_quantity
             self.save()
 
             # Create a new inventory transaction for the new item
@@ -578,7 +579,7 @@ class InventoryTransaction(models.Model):
             new_inventory_transaction.pk = None
             # Update the quantity to reflect the quantity of items being
             # updated
-            new_inventory_transaction.quantity = self.getQuantityRemaining()
+            new_inventory_transaction.quantity = remaining_quantity
             new_inventory_transaction.sale_price = new_sale_price
 
             # Set the cost to 0, as the cost is captured in the original
