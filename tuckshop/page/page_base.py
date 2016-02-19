@@ -51,7 +51,7 @@ class PageBase(object):
     CONTENT_TYPE = 'text/html'
     REQUIRES_AUTHENTICATION = True
     PERMISSION = Permission.ADMIN
-    POST_URL = ''
+    POST_URL = None
     SUB_MENU = None
     MENU_ORDER = None
     MENU_NAME = None
@@ -117,7 +117,12 @@ class PageBase(object):
 
     @property
     def post_redirect_url(self):
-        return self.post_redirect_url_custom or self.POST_URL
+        if self.post_redirect_url_custom:
+            return self.post_redirect_url
+        elif self.POST_URL:
+            return self.POST_URL
+        else:
+            return self.request_handler.path
 
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
@@ -292,7 +297,8 @@ class PageBase(object):
         self.request_handler.send_response(self.response_code)
 
         # Send Content-type header
-        self.request_handler.send_header('Content-type', self.contentType)
+        if self.contentType:
+            self.request_handler.send_header('Content-type', self.contentType)
 
         # Send headers defined by page
         for key in self.headers:
@@ -362,8 +368,9 @@ class PageBase(object):
         """Perform redirect after post request"""
         # Convert return vars to session variables
         self.setSessionVar('return_vars', json.dumps(self.return_vars))
-        self.response_code = 302
+        self.response_code = 303
         self.headers['Location'] = self.post_redirect_url
+        self.CONTENT_TYPE = None
 
     def getPaginationData(self, current_page, total_pages, url_template):
         if total_pages <= Config.TOTAL_PAGE_DISPLAY():
