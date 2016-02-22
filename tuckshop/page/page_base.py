@@ -118,7 +118,7 @@ class PageBase(object):
     @property
     def post_redirect_url(self):
         if self.post_redirect_url_custom:
-            return self.post_redirect_url
+            return self.post_redirect_url_custom
         elif self.POST_URL:
             return self.POST_URL
         else:
