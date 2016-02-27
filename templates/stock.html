@@ -7,16 +7,15 @@
                     function update_common(item_id) {
                         var select = document.getElementById("common_dropdown");
                         var length = select.options.length;
-                        for (i = 0; i < length; i++) {
+                        for (i = 1; i < (length - 1); i++) {
                             select.options.remove(i);
                         }
 
+                        select.selectedIndex = 0;
+                        update_fields('["0"]');
                         if (latest_transactions[item_id].length > 0)
                         {
                             var option = document.createElement("option");
-                            option.text = "Select...";
-                            option.value = '["0"]';
-                            select.add(option);
                             latest_transactions[item_id].forEach(function(element, index, array){
                                 var option = document.createElement("option");
                                 option.text = "Q: " + element[1] + ", C: \u00A3" + element[2] + ", SP: " + element[3] + "p, " + element[4];
@@ -27,10 +26,6 @@
                         }
                         else
                         {
-                            var option = document.createElement("option");
-                            option.text = "None";
-                            option.value = '["0"]';
-                            select.add(option);
                             select.disabled = true;
                         }
                     }
@@ -107,6 +102,7 @@
                                     <label class="col-md-4 control-label" for="common_dropdown">Common Transactions</label>
                                     <div class="col-md-6">
                                         <select id="common_dropdown" name="common_dropdown" class="form-control" onchange="update_fields(this.value)" disabled>
+                                            <option value='["0"]'>Select...</option>
                                         </select>
                                         <p class="help-block">Select a recent transaction to pre-fill form<br />(Q: Quantity, C: Cost, SP: Sale Price)</p>
                                     </div>
