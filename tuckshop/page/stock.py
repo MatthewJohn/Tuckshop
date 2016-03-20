@@ -47,9 +47,9 @@ class Stock(PageBase):
 
     def processPost(self):
         """Handle post requests"""
-        action = self.getPostVariable(name='action', possible_values=['Add Stock', 'update', 'archive',
+        action = self.getPostVariable(name='action', possible_values=['add_stock', 'update', 'archive',
                                                                       'delete', 'create'])
-        if (action == 'Add Stock'):
+        if (action == 'add_stock'):
             quantity = self.getPostVariable(name='quantity', var_type=int,
                                             special=[VariableVerificationTypes.POSITIVE],
                                             message='Quantity must be a positive integer')

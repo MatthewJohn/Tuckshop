@@ -32,6 +32,7 @@
 
                     $(document).ready(function() {
                         update_common({{ active_items[0].id }});
+                        document.getElementById('add_stock_submit_button').disabled = false;
                     });
 
                     function update_fields(common_data_string)
@@ -80,13 +81,18 @@
                             document.getElementById('cost_input_each').disabled = true;
                             document.getElementById('cost_input_each').value = '';
                             document.getElementById('cost_input_total').disabled = false;
+
                         }
+                    }
+                    function disable_stock_input()
+                    {
+                        document.getElementById('add_stock_submit_button').disabled = true;
                     }
                     </script>
                     <div class="row" id="central position-central">
                         <div class="col-md-12 form-horizontal" style="border-radius: 4px 4px 0 0; border-width: 1px; border-color: #ddd; border-style: solid;">
                             <h2>Add Stock</h2>
-                            <form action="/stock" method="post">
+                            <form action="/stock" method="post" onclick="disable_stock_input()">
                                 <div class="form-group">
                                     <label class="col-md-4 control-label" for="selectbasic">Item</label>
                                     <div class="col-md-4">
@@ -112,7 +118,7 @@
                                 <div class="form-group">
                                     <label class="col-md-4 control-label" for="quantity_input">Quantity</label>  
                                     <div class="col-md-2">
-                                        <input id="quantity_input" name="quantity" placeholder="5" class="form-control input-md" required="" type="text">
+                                        <input id="quantity_input" name="quantity" placeholder="5" class="form-control input-md" type="text">
                                         <span class="help-block">Quantity of items to be added</span>  
                                     </div>
                                 </div>
@@ -166,7 +172,8 @@
                                 <div class="form-group">
                                     <label class="col-md-4 control-label" for="singlebutton"></label>
                                     <div class="col-md-4">
-                                        <input type="submit" name="action" value="Add Stock" class="btn btn-info" />
+                                        <input type="hidden" name="action" value="add_stock" />
+                                        <input id="add_stock_submit_button" type="submit" value="Add Stock" class="btn btn-info" />
                                     </div>
                                 </div>
                             </form>
