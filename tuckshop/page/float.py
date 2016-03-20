@@ -132,6 +132,13 @@ class Float(PageBase):
     def getUnpaidStock(self):
         """Returns the amount owed for stock"""
         owed_amount = 0
+
+        # Iterate over users, aggregating the total amounts
+        # owed for stock
         for user in User.objects.all():
             owed_amount += user.getTotalOwed()
+
+            # Remove the amount that is present as stock credit
+            owed_amount -= user.getStockCreditValue()
+
         return owed_amount
