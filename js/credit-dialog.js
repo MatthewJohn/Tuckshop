@@ -10,14 +10,28 @@ function purchaseItem(event)
                  '<br /><br />Purchase on behalf of a shared account? <input type="checkbox" name="use_shared_user" value="1" form="purchase-' + item_id + '" onchange="updateSharedAccount(event)">' +
                  '<br /><div id="item_purchase_shared_account" style="display: none">' +
                  'Account: <select name="shared_account" id="purchase_shared_account" form="purchase-' + item_id + '"></select><br />' +
-                 '<input type="text" form="purchase-' + item_id + '" name="description" placeholder="Purchase Description..." required />' +
+                 '<input type="text" form="purchase-' + item_id + '" id="shared_account_description" name="description" placeholder="Purchase Description..." />' +
+                 '<input type="submit" id="purchase_item_submit" form="purchase-' + item_id + '" style="display: none" />' +
                  '<br /><b>Only purchase from shared accounts when you have authorisation to do so.<br />' +
                  'Purchases made to shared accounts are regularly monitored.</b></div>',
         buttons: [{
             label: 'Purchase',
             action: function(dialogRef) {
-                event.target.submit();
-                dialogRef.close()
+                if (event.target.checkValidity())
+                {
+                    this.disable();
+                    this.spin();
+                    dialogRef.setClosable(false);
+                    buttons = document.getElementsByClassName('btn-primary');
+                    for (var i = 0; i < buttons.length; i++) {
+                      buttons[i].disabled = true;
+                    }
+                    event.target.submit();
+                }
+                else
+                {
+                    document.getElementById('purchase_item_submit').click();
+                }
             },
             cssClass: 'btn-warning'
         },
@@ -43,6 +57,7 @@ function updateSharedAccount(event)
       option.value = element[0];
       select.add(option);
     });
+    document.getElementById('shared_account_description').required = 'required';
   }
   else
   {
@@ -51,6 +66,7 @@ function updateSharedAccount(event)
         select.options.remove(i);
     }
     document.getElementById('item_purchase_shared_account').style.display = 'none';
+    document.getElementById('shared_account_description').required = '';
   }
 }
 
