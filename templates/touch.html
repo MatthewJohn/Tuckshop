@@ -35,8 +35,7 @@
             </div>
 
             <div id="item-select" class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                
-                <img src="https://cdn1.iconfinder.com/data/icons/MetroStation-PNG/128/MB__back.png" class="img-thumbnail item-object" onclick='reset_page();' />
+                <div class="img-thumbnail item-object reset-object" onclick='reset_page();'>Logout</div>
                 {% for item in items %}
                 <img src="{{ item.getImageObject().getImageUrl() }}" data-name="{{ item.name }}" data-item-id="{{ item.id }}" data-sale-price-string="{{ item.getSalePriceString() }}" data-sale-price="{{ item.getSalePrice() }}" class="img-thumbnail item-object" onclick='select_item(this);'/>
                 {% endfor %}

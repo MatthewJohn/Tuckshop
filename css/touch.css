@@ -37,6 +37,15 @@
   cursor: pointer;
 }
 
+.reset-object
+{
+  font-size: 30px;
+  background-color: #8870FF;
+  border: 0;
+  vertical-align: middle;
+  padding-top: 37px;
+}
+
 .purchase-image
 {
   float: right;
