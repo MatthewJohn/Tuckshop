@@ -421,7 +421,7 @@ class Inventory(models.Model):
         return len(Transaction.objects.filter(inventory_transaction__inventory=self))
 
     @staticmethod
-    def getAvailableItemsByPopularity():
+    def getAvailableItemsByPopularity(include_out_of_stock=True):
         """Returns available items, sorted by popularity"""
         items = Inventory.getAvailableItems()
 
