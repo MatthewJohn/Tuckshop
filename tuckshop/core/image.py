@@ -14,7 +14,7 @@ from tuckshop.core.tuckshop_exception import TuckshopException
 class Image(object):
     """Provides methods for obtaining and caching inventory images"""
 
-    DEFAULT_IMAGE = 'http://www.monibazar.com/images/noimage.png'
+    DEFAULT_IMAGE = 'http://www.irishdist.ie/wp-content/uploads/2015/07/noimage-400x400.jpg'
 
     @property
     def cache_key(self):

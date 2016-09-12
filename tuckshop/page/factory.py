@@ -18,6 +18,8 @@ from tuckshop.page.history.user import User as UserHistory
 from tuckshop.page.admin.permission import Permission
 from tuckshop.page.float import Float
 from tuckshop.page.item_image import ItemImage
+from tuckshop.page.touch import Touch
+
 
 class Factory(object):
     """Factory class for obtaining page objects"""
@@ -44,7 +46,7 @@ class Factory(object):
             page_object = PersonalHistory(request_handler)
         elif name == 'stock-history':
             page_object = StockHistory(request_handler)
-        elif  name == 'shared-history':
+        elif name == 'shared-history':
             page_object = SharedHistory(request_handler)
         elif name == 'unpaid-stock':
             page_object = UnpaidStock(request_handler)
@@ -64,6 +66,8 @@ class Factory(object):
             page_object = Favicon(request_handler)
         elif name == 'item-image':
             page_object = ItemImage(request_handler)
+        elif name == 'touch':
+            page_object = Touch(request_handler)
         else:
             page_object = NotFound(request_handler)
 
