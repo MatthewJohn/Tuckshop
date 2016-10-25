@@ -2,7 +2,7 @@ from os import environ
 import ldap
 
 
-def getMoneyString(credit, include_sign=True, colour_switch=False):
+def getMoneyString(credit, include_sign=True, colour_switch=False, symbol='&pound;'):
     positive_colour = 'green' if not colour_switch else 'red'
     negative_colour = 'red' if not colour_switch else 'green'
     text_color = positive_colour if credit >= 0 else negative_colour
@@ -16,7 +16,7 @@ def getMoneyString(credit, include_sign=True, colour_switch=False):
     if (credit < 100):
         credit_string = str(credit) + 'p'
     else:
-        credit_string = '&pound;%.2f' % (float(credit) / 100)
+        credit_string = symbol + '%.2f' % (float(credit) / 100)
 
     if (include_sign):
         return '<font style="color: %s">%s%s</font>' % (text_color, credit_sign, credit_string)
