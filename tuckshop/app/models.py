@@ -10,6 +10,7 @@ from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.core.utils import getMoneyString
 from tuckshop.core.image import Image
+from tuckshop.core.skype import Skype
 
 
 class User(models.Model):
@@ -19,6 +20,7 @@ class User(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     shared = models.BooleanField(default=False)
     shared_name = models.CharField(max_length=255, null=True)
+    skype_id = models.CharField(max_length=64, null=True)
 
     current_credit_cache_key = 'User_%s_credit'
 
@@ -101,6 +103,16 @@ class User(models.Model):
                     return True
             # Otherwise if the transaction was not payed off, return False
             return False
+
+        if self.skype_id:
+            try:
+                Skype.send_message(
+                    self.skype_id,
+                    'Paid for stock: ' + getMoneyString(amount, include_sign=False, symbol=u"\xA3") +
+                        ' (including credit)'
+                )
+            except:
+                pass
 
         semi_paid_transaction = None
         stock_payment_transaction = None
@@ -199,6 +211,16 @@ class User(models.Model):
         current_credit += amount
         RedisConnection.set(User.current_credit_cache_key % self.id,
                             current_credit)
+
+        if self.skype_id:
+            try:
+                Skype.send_message(self.skype_id,
+                                   'Credit added: ' + getMoneyString(amount,
+                                                                     include_sign=False,
+                                                                     symbol=u"\xA3"))
+            except:
+                pass
+
         return current_credit
 
     def removeCredit(self, affect_float, amount=None, inventory=None, description=None,
@@ -215,9 +237,11 @@ class User(models.Model):
         transaction = Transaction(user=self, debit=True, author=author)
 
         if admin_payment:
+            skype_message = 'An admin has added money to your account: '
             payment_type = Transaction.TransactionType.ADMIN_CHANGE.value
         else:
             payment_type = Transaction.TransactionType.CUSTOM_PAYMENT.value
+            skype_message = 'You made a custom payment: '
 
         if (inventory):
             payment_type = Transaction.TransactionType.ITEM_PURCHASE.value
@@ -226,6 +250,7 @@ class User(models.Model):
                 raise TuckshopException('No inventory transaction available for this item')
 
             transaction.inventory_transaction = inventory_transaction
+
 
             if (not amount):
                 amount = inventory_transaction.sale_price
@@ -236,6 +261,7 @@ class User(models.Model):
                     raise TuckshopException('Purchase cancelled - Price has changed from %s to %s' %
                                             (getMoneyString(verify_price, include_sign=False),
                                              getMoneyString(amount, include_sign=False)))
+            skype_message = inventory.name + ' purchased: '
 
         elif not amount:
             raise TuckshopException('Must pass amount or inventory')
@@ -254,6 +280,17 @@ class User(models.Model):
         current_credit -= amount
         RedisConnection.set(User.current_credit_cache_key % self.id,
                             current_credit)
+
+        skype_message += getMoneyString(amount, include_sign=False,
+                                        symbol=u"\xA3")
+        skype_message += ("\nReason: " + description) if description else '' 
+        skype_message += "\nNew Credit: " + getMoneyString(current_credit, include_sign=False,
+                                                           symbol=u"\xA3")
+        if self.skype_id:
+            try:
+                Skype.send_message(self.skype_id, skype_message)
+            except Exception, e:
+                print str(e)
 
         return current_credit
 

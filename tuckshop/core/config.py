@@ -31,3 +31,6 @@ class Config(object):
     def LDAP_SERVER():
         return 'localhost' if 'LDAP_SERVER' not in environ else environ['LDAP_SERVER']
 
+    @staticmethod
+    def SKYPE_CREDENTIALS():
+        return (environ['SKYPE_USERNAME'], environ['SKYPE_PASS']) if 'SKYPE_USERNAME' in environ and 'SKYPE_PASS' in environ else None
