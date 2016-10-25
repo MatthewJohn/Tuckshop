@@ -37,6 +37,7 @@ function select_user(user_obj)
   DIALOGUE_REF = BootstrapDialog.show({
       size: BootstrapDialog.SIZE_LARGE,
       title: '',
+      animate: false,
       message: '<p class="login-dialog-text">Are you sure you wish to login as <b>' + name + ' (' + username + ')</b>?</p>',
       buttons: [{
           label: 'Yes',
@@ -55,7 +56,7 @@ function select_user(user_obj)
           cssClass: 'btn-info touch-button-large'
       }]
   });
-  return false;  
+  return false;
 }
 
 function select_item(item_obj)
@@ -69,6 +70,7 @@ function select_item(item_obj)
                '<form method="post" id="purchase-item"><input type="hidden" name="username" value="' + LOGGED_IN_USER + '" />' +
                '<input type="hidden" name="item_id" value="' + $(item_obj).attr('data-item-id') + '" />' +
                '<input type="hidden" name="sale_price" value="' + $(item_obj).attr('data-sale-price') + '" /></form>',
+      animate: false,
       buttons: [{
           label: 'Purchase',
           action: function(dialogRef) {
