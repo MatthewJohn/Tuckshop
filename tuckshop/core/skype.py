@@ -35,13 +35,13 @@ class Skype(object):
 
     @staticmethod
     def contact_exists(user_id):
-        for contact in Skype.get_connection().contacts:
-            if contact.id == user_id:
-                return True
-
         for request in Skype.get_connection().contacts.requests():
             if request.user.id == user_id:
                 request.accept()
+                return True
+
+        for contact in Skype.get_connection().contacts:
+            if contact.id == user_id:
                 return True
 
         return False
