@@ -20,18 +20,22 @@ class Skype(object):
             except:
                 time.sleep(3)
                 Skype.SKYPE_CONNECTION = SkypeAPI(credentials[0], credentials[1])
-        Skype.SKYPE_CONNECTION.setPresence()
         return Skype.SKYPE_CONNECTION
 
 
     @staticmethod
     def send_message(user_id, message):
-        if Skype.contact_exists(user_id):
-            user = Skype.get_connection().contacts.user(user_id)
-            chat = user.chat
-            chat.setTyping(active=True)
-            chat.sendMsg(message)
-            chat.setTyping(active=False)
+        try:
+            if Skype.contact_exists(user_id):
+                user = Skype.get_connection().contacts.user(user_id)
+                chat = user.chat
+                chat.sendMsg(message)
+        except:
+            Skype.SKYPE_CONNECTION = None
+            if Skype.contact_exists(user_id):
+                user = Skype.get_connection().contacts.user(user_id)
+                chat = user.chat
+                chat.sendMsg(message)
 
     @staticmethod
     def contact_exists(user_id):
