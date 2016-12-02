@@ -1,15 +1,24 @@
 
 from skpy import Skype as SkypeAPI
 import time
+from celery import Celery
 
 from tuckshop.core.config import Config
+
+skype_celery = Celery('skype', broker='pyamqp://guest@localhost//', backend='redis://localhost')
 
 class Skype(object):
 
     SKYPE_CONNECTION = None
+    SKYPE_OBJECT = None
 
     @staticmethod
-    def get_connection():
+    def get_object():
+        if Skype.SKYPE_OBJECT is None:
+            Skype.SKYPE_OBJECT = Skype()
+        return Skype.SKYPE_OBJECT
+
+    def get_connection(self):
         credentials = Config.SKYPE_CREDENTIALS()
         if credentials is None:
             raise Exception('No skype credentials available')
@@ -22,29 +31,28 @@ class Skype(object):
                 Skype.SKYPE_CONNECTION = SkypeAPI(credentials[0], credentials[1])
         return Skype.SKYPE_CONNECTION
 
-
-    @staticmethod
-    def send_message(user_id, message):
+    @skype_celery.task(bind=True)
+    def send_message(self, user_id, message):
+        print 'test'
         try:
-            if Skype.contact_exists(user_id):
-                user = Skype.get_connection().contacts.user(user_id)
+            if Skype.get_object().contact_exists(user_id):
+                user = Skype.get_object().get_connection().contacts.user(user_id)
                 chat = user.chat
                 chat.sendMsg(message)
         except:
             Skype.SKYPE_CONNECTION = None
-            if Skype.contact_exists(user_id):
-                user = Skype.get_connection().contacts.user(user_id)
+            if Skype.get_object().get_connection().contact_exists(user_id):
+                user = Skype.get_object().get_connection().contacts.user(user_id)
                 chat = user.chat
                 chat.sendMsg(message)
 
-    @staticmethod
-    def contact_exists(user_id):
-        for request in Skype.get_connection().contacts.requests():
+    def contact_exists(self, user_id):
+        for request in self.get_connection().contacts.requests():
             if request.user.id == user_id:
                 request.accept()
                 return True
 
-        for contact in Skype.get_connection().contacts:
+        for contact in self.get_connection().contacts:
             if contact.id == user_id:
                 return True
 

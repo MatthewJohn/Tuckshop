@@ -105,15 +105,12 @@ class User(models.Model):
             return False
 
         if self.skype_id:
-            try:
-                Skype.send_message(
-                    self.skype_id,
-                    'Paid for stock: ' + getMoneyString(amount, include_sign=False, symbol=u"\xA3") +
-                        ' (including credit)'
-                )
-            except:
-                pass
-
+            Skype.get_object().send_message.delay(
+                self.skype_id,
+                'Paid for stock: ' +
+                getMoneyString(amount, include_sign=False, symbol=u"\xA3") +
+                ' (including credit)'
+            )
         semi_paid_transaction = None
         stock_payment_transaction = None
 
@@ -214,10 +211,12 @@ class User(models.Model):
 
         if self.skype_id:
             try:
-                Skype.send_message(self.skype_id,
-                                   'Credit added: ' + getMoneyString(amount,
-                                                                     include_sign=False,
-                                                                     symbol=u"\xA3"))
+                Skype.get_object().send_message.delay(
+                    self.skype_id,
+                    'Credit added: ' + getMoneyString(
+                        amount,
+                        include_sign=False,
+                        symbol=u"\xA3"))
             except:
                 pass
 
@@ -283,14 +282,11 @@ class User(models.Model):
 
         skype_message += getMoneyString(amount, include_sign=False,
                                         symbol=u"\xA3")
-        skype_message += ("\nReason: " + description) if description else '' 
+        skype_message += ("\nReason: " + description) if description else ''
         skype_message += "\nNew Credit: " + getMoneyString(current_credit, include_sign=False,
                                                            symbol=u"\xA3")
         if self.skype_id:
-            try:
-                Skype.send_message(self.skype_id, skype_message)
-            except Exception, e:
-                print str(e)
+            Skype.get_object().send_message.delay(self.skype_id, skype_message)
 
         return current_credit
 
