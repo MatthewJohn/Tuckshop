@@ -9,4 +9,4 @@ WORKDIR /code
 ADD . /code/
 
 EXPOSE 5000
-#ENTRYPOINT ["bash", "-c", "service rabbitmq-server start && python ./scripts/start_tests.py && python ./manage.py syncdb && python ./tuckshopaccountant.py"]
+ENTRYPOINT ["bash", "-c", "service rabbitmq-server start && celery worker --concurrency 1 --app tuckshop.core.skype.skype_celery -b 'pyamqp://guest@localhost//' -D && python ./scripts/start_tests.py && python ./manage.py syncdb && python ./tuckshopaccountant.py"]
