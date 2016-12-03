@@ -1,10 +1,7 @@
 #!/bin/bash
 
-# Start the rabbitmq server
-service rabbitmq-server start
-
 # Start the celert worker for Skype in the background
-C_FORCE_ROOT=1 celery worker --concurrency 1 --app tuckshop.core.skype.skype_celery -b 'pyamqp://guest@localhost//' -D
+C_FORCE_ROOT=1 celery worker --concurrency 1 --app tuckshop.core.skype.skype_celery -b $RABBITMQ_URL -D
 
 # Run unit tests
 python ./scripts/start_tests.py
@@ -13,4 +10,4 @@ python ./scripts/start_tests.py
 python ./manage.py syncdb
 
 # Start tuckshop server in foreground
-python ./tuckshopaccountant.py
+python ./tuckshopaccountant.py > output.log

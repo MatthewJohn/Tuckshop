@@ -224,6 +224,7 @@ class User(models.Model):
 
     def removeCredit(self, affect_float, amount=None, inventory=None, description=None,
                      verify_price=None, admin_payment=False, author=None):
+        print 'adg'
         if author is None:
             raise TuckshopException('Author must be specified for credit changes')
         if (inventory and inventory.getQuantityRemaining() <= 0):
@@ -286,9 +287,7 @@ class User(models.Model):
         skype_message += "\nNew Credit: " + getMoneyString(current_credit, include_sign=False,
                                                            symbol=u"\xA3")
         if self.skype_id:
-            out = Skype.get_object().send_message.delay(self.skype_id, skype_message)
-            print out.get(timeout=30)
-            print out.traceback
+            Skype.get_object().send_message.delay(self.skype_id, skype_message)
 
         return current_credit
 

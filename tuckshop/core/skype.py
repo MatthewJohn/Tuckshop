@@ -7,7 +7,8 @@ from celery import Celery
 from tuckshop.core.config import Config
 
 redis_url = os.environ['REDIS_URL'] if 'REDIS_URL' in os.environ else 'redis://localhost'
-skype_celery = Celery('skype', broker='pyamqp://guest@localhost//', backend=redis_url)
+broker_url = os.environ['RABBITMQ_URL'] if 'RABBITMQ_URL' in os.environ else 'pyamqp://guest@localhost//'
+skype_celery = Celery('skype', broker=broker_url, backend=redis_url)
 
 
 class Skype(object):
