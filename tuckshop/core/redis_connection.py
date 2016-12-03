@@ -59,9 +59,7 @@ class RedisConnection(object):
     def _getConnection():
         if not RedisConnection.CONNECTION:
             if 'REDIS_URL' in os.environ:
-                url = urlparse.urlparse(url=os.environ['REDIS_URL'])
-                RedisConnection.CONNECTION = redis.Redis(host=url.hostname, port=url.port,
-                                                         password=url.password)
+                RedisConnection.CONNECTION = redis.Redis.from_url(url=os.environ['REDIS_URL'])
             else:
                 RedisConnection.CONNECTION = LocalRedis()
 
