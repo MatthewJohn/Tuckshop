@@ -19,6 +19,7 @@ from tuckshop.page.admin.permission import Permission
 from tuckshop.page.float import Float
 from tuckshop.page.item_image import ItemImage
 from tuckshop.page.touch import Touch
+from tuckshop.page.graph import Graph
 
 
 class Factory(object):
@@ -68,6 +69,8 @@ class Factory(object):
             page_object = ItemImage(request_handler)
         elif name == 'touch':
             page_object = Touch(request_handler)
+        elif name == 'graph':
+            page_object = Graph(request_handler)
         else:
             page_object = NotFound(request_handler)
 

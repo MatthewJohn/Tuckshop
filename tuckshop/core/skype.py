@@ -2,13 +2,9 @@
 from skpy import Skype as SkypeAPI
 import time
 import os
-from celery import Celery
+from tuckshop.core.celery_con import celery
 
 from tuckshop.core.config import Config
-
-redis_url = os.environ['REDIS_URL'] if 'REDIS_URL' in os.environ else 'redis://localhost'
-broker_url = os.environ['RABBITMQ_URL'] if 'RABBITMQ_URL' in os.environ else 'pyamqp://guest@localhost//'
-skype_celery = Celery('skype', broker=broker_url, backend=redis_url)
 
 
 class Skype(object):
@@ -35,9 +31,8 @@ class Skype(object):
                 Skype.SKYPE_CONNECTION = SkypeAPI(credentials[0], credentials[1])
         return Skype.SKYPE_CONNECTION
 
-    @skype_celery.task(bind=True)
+    @celery.task(bind=True)
     def send_message(self, user_id, message):
-        print 'test'
         try:
             if Skype.get_object().contact_exists(user_id):
                 user = Skype.get_object().get_connection().contacts.user(user_id)
