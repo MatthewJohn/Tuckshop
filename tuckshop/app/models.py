@@ -286,7 +286,9 @@ class User(models.Model):
         skype_message += "\nNew Credit: " + getMoneyString(current_credit, include_sign=False,
                                                            symbol=u"\xA3")
         if self.skype_id:
-            Skype.get_object().send_message.delay(self.skype_id, skype_message)
+            out = Skype.get_object().send_message.delay(self.skype_id, skype_message)
+            print out.get(timeout=30)
+            print out.traceback
 
         return current_credit
 
