@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+                    <link rel="stylesheet" href="/css/bootstrap-dialog.css" />
+                    <script src="/js/bootstrap-dialog.js"></script>
+                    <script src="/js/admin-dialog.js"></script>                                   
+                    <script src="https://d3js.org/d3.v3.min.js"></script>
+                    <link href="/css/c3.css" rel="stylesheet" type="text/css">
+                    <script src="/js/c3.min.js"></script>
+                    <div class="row" id="central position-central">
+                            <div id="chart"></div>
+                    {% if graph_data %}
+                        <script type="text/javascript">
+                            var chart = c3.generate({
+                                bindto: '#chart',
+                                data: {
+                                  columns: JSON.parse('{{ graph_data }}')
+                                },
+                                axis: {
+                                  y: {
+                                    label: {
+                                      text: 'Amount'
+                                    },
+                                    tick: {
+                                      format: d3.format("&pound;,")
+                                    }
+                                  }
+                                }
+                            });
+                            chart.xgrids([
+                                {value: 27, text: 'Yesterday'}, {value: 21, text: '1 Week Ago'},
+                                {value: 13, text: '2 Weeks Ago'}, {value: 6, text: '3 Weeks Ago'}
+                            ]);
+                        </script>
+                        {% else %}
+                        <META HTTP-EQUIV="refresh" CONTENT="5">
+                        Data is currently being generated.
+                        <br />
+                        Remaining jobs: {{ not_enough_data }}
+                        <br />
+                        Page will reload automatically in 5 seconds...
+                        {% endif %}
+                    </div>
+{% endblock %}

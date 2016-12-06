@@ -13,7 +13,27 @@ from tuckshop.core.image import Image
 from tuckshop.core.skype import Skype
 
 
-class User(models.Model):
+LOOKUP_OBJECTS = {
+    'User': None,
+    'Inventory': None,
+    'InventoryTransaction': None,
+    'Transaction': None,
+    'StockPayment': None,
+    'StockPaymentTransaction': None
+}
+
+class LookupModel(models.Model):
+    @classmethod
+    def get_all(cls):
+        if LOOKUP_OBJECTS[cls.__name__]:
+            return LOOKUP_OBJECTS[cls.__name__]
+        else:
+            return cls.objects.all()
+
+    class Meta:
+        abstract = True
+
+class User(LookupModel):
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
     permissions = models.IntegerField(default=0)
@@ -67,7 +87,7 @@ class User(models.Model):
 
     def getStockCredit(self):
         """Returns the stock payments objects for credit"""
-        return StockPayment.objects.filter(user=self, inventory_transaction__isnull=True)
+        return StockPayment.get_all().filter(user=self, inventory_transaction__isnull=True)
 
     def payForStock(self, author_user, amount):
         # Ensure that amount is a positive integer (or 0)
@@ -85,7 +105,7 @@ class User(models.Model):
                 # in the credit, split the credit, so that the amount remaining on
                 # the transaction can be payed off.
                 if due_amount < credit_amount:
-                    remainder_stock_credit = StockPayment.objects.get(pk=credit_stock_payment.pk)
+                    remainder_stock_credit = StockPayment.get_all().get(pk=credit_stock_payment.pk)
                     remainder_stock_credit.pk = None
                     remainder_stock_credit.amount = int(credit_amount - due_amount)
                     remainder_stock_credit.save()
@@ -171,24 +191,26 @@ class User(models.Model):
         # Would use the following, however, the Sum annotation cannot be used to filter
         # InventoryTransaction.objects.filter(user=self).annotate(amount_paid=models.Sum('stockpayment__amount')).order_by('-amount_paid', 'timestamp')
         inventory_transactions = []
-        for inventory_transaction in InventoryTransaction.objects.filter(user=self):
+        for inventory_transaction in InventoryTransaction.get_all().filter(user=self):
             if inventory_transaction.getRemainingCost():
                 inventory_transactions.append(inventory_transaction)
         inventory_transactions.sort(key=lambda x: (-x.getAmountPaid(), bool(x.getQuantityRemaining()), x.timestamp))
         return inventory_transactions
 
-    def getCurrentCredit(self, refresh_cache=False):
-        if (refresh_cache or
+    def getCurrentCredit(self, refresh_cache=False, transactions=None):
+        if (refresh_cache or LOOKUP_OBJECTS['Transaction'] or
                 not RedisConnection.exists(User.current_credit_cache_key % self.id)):
             balance = 0
-            for transaction in Transaction.objects.filter(user=self):
+            user_transactions = Transaction.get_all()
+            for transaction in user_transactions.filter(user=self):
                 if (transaction.debit):
                     balance -= transaction.amount
                 else:
                     balance += transaction.amount
 
-            # Update cache
-            RedisConnection.set(User.current_credit_cache_key % self.id, balance)
+            if not LOOKUP_OBJECTS['Transaction']:
+                # Update cache
+                RedisConnection.set(User.current_credit_cache_key % self.id, balance)
         else:
             # Obtain credit from cache
             balance = int(RedisConnection.get(User.current_credit_cache_key % self.id))
@@ -224,7 +246,6 @@ class User(models.Model):
 
     def removeCredit(self, affect_float, amount=None, inventory=None, description=None,
                      verify_price=None, admin_payment=False, author=None):
-        print 'adg'
         if author is None:
             raise TuckshopException('Author must be specified for credit changes')
         if (inventory and inventory.getQuantityRemaining() <= 0):
@@ -304,7 +325,7 @@ class User(models.Model):
             date_to = datetime.datetime.now()
         parameters['timestamp__lt'] = date_to
 
-        transactions = Transaction.objects.all()
+        transactions = Transaction.get_all()
 
         if author:
             parameters['author'] = self
@@ -316,10 +337,10 @@ class User(models.Model):
         return transactions.filter(**parameters)
 
     def getStockPayments(self):
-        return StockPayment.objects.filter(user=self)
+        return StockPayment.get_all().filter(user=self)
 
     def getStockPaymentTransactions(self):
-        return StockPaymentTransaction.objects.filter(user=self)
+        return StockPaymentTransaction.get_all().filter(user=self)
 
     @property
     def isAdmin(self):
@@ -358,7 +379,7 @@ class User(models.Model):
         return bool(self._permissionValue & permission_bit)
 
 
-class Inventory(models.Model):
+class Inventory(LookupModel):
     name = models.CharField(max_length=200)
     bardcode_number = models.CharField(max_length=25, null=True)
     image_url = models.CharField(max_length=250, null=True)
@@ -370,7 +391,7 @@ class Inventory(models.Model):
     def getStockValue(self):
         """Returns the total sale value for the available stock"""
         total_value = 0
-        for inv_transaction in InventoryTransaction.objects.filter(inventory=self):
+        for inv_transaction in InventoryTransaction.get_all().filter(inventory=self):
             total_value += (inv_transaction.getQuantityRemaining() * inv_transaction.sale_price)
 
         return total_value
@@ -384,7 +405,7 @@ class Inventory(models.Model):
     def getQuantityRemaining(self, include_all_transactions=True):
         if (include_all_transactions):
             quantity = 0
-            for transaction in InventoryTransaction.objects.filter(inventory=self):
+            for transaction in InventoryTransaction.get_all().filter(inventory=self):
                 quantity += transaction.getQuantityRemaining()
         else:
             quantity = self.getCurrentInventoryTransaction().getQuantityRemaining()
@@ -397,24 +418,24 @@ class Inventory(models.Model):
 
         # If the cache if to be refreshed or the cache has not been set,
         # calculate the current inventory transaction for the item
-        if (refresh_cache or not cache_exists):
+        if (refresh_cache or not cache_exists or LOOKUP_OBJECTS['InventoryTransaction']):
 
             # Iterate through the inventory transactions for this item
-            for transaction in InventoryTransaction.objects.filter(inventory=self).order_by('timestamp'):
+            for transaction in InventoryTransaction.get_all().filter(inventory=self).order_by('timestamp'):
 
                 # If the transaction has items left, set this as the current
                 # transaction and return it
-                if (transaction.getQuantityRemaining()):
+                if (transaction.getQuantityRemaining() and not LOOKUP_OBJECTS['InventoryTransaction']):
                     RedisConnection.set(cache_key, transaction.id)
                     return transaction
 
             # If no active transaction were found, clear the cache and
             # return with None
-            if cache_exists:
+            if cache_exists and not LOOKUP_OBJECTS['InventoryTransaction']:
                 RedisConnection.delete(cache_key)
             return None
         else:
-            transaction = InventoryTransaction.objects.get(pk=RedisConnection.get(cache_key))
+            transaction = InventoryTransaction.get_all().get(pk=RedisConnection.get(cache_key))
 
             # Ensure that the transaction has items left
             if (transaction.getQuantityRemaining()):
@@ -426,7 +447,7 @@ class Inventory(models.Model):
                 return self.getCurrentInventoryTransaction(refresh_cache=True)
 
     def getInventoryTransactions(self, only_active=True):
-        inventory_transactions_qs = InventoryTransaction.objects.filter(inventory=self)
+        inventory_transactions_qs = InventoryTransaction.get_all().filter(inventory=self)
         inventory_transactions = []
         for inventory_transaction in inventory_transactions_qs:
             if inventory_transaction.getQuantityRemaining() or not only_active:
@@ -440,7 +461,7 @@ class Inventory(models.Model):
     @staticmethod
     def getAvailableItems():
         """Returns the available items"""
-        items = Inventory.objects.filter(archive=False)
+        items = Inventory.get_all().filter(archive=False)
         # If out of stock items are not show, filter
         # them from the query
         if not Config.SHOW_OUT_OF_STOCK_ITEMS():
@@ -452,7 +473,7 @@ class Inventory(models.Model):
 
     def getTransactionCount(self):
         """Returns the number of transaction for the item"""
-        return len(Transaction.objects.filter(inventory_transaction__inventory=self))
+        return len(Transaction.get_all().filter(inventory_transaction__inventory=self))
 
     @staticmethod
     def getAvailableItemsByPopularity(include_out_of_stock=True):
@@ -486,7 +507,7 @@ class Inventory(models.Model):
         if price is None:
             # If there is no current transaction, return the price
             # from the last transaction
-            transactions = InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp')
+            transactions = InventoryTransaction.get_all().filter(inventory=self).order_by('-timestamp')
             if len(transactions):
                 return getMoneyString(transactions[0].sale_price, include_sign=False)
             else:
@@ -496,7 +517,7 @@ class Inventory(models.Model):
             return getMoneyString(price, include_sign=False)
 
     def getPriceRangeString(self):
-        inventory_transactions = InventoryTransaction.objects.filter(inventory=self).order_by('sale_price')
+        inventory_transactions = InventoryTransaction.get_all().filter(inventory=self).order_by('sale_price')
         inventory_transaction_list = []
         for inventory_transaction in inventory_transactions:
             if (inventory_transaction.getQuantityRemaining()):
@@ -519,7 +540,7 @@ class Inventory(models.Model):
                 return getMoneyString(sale_price_from, include_sign=False)
 
     def getLatestSalePrice(self):
-        inventory_transactions = InventoryTransaction.objects.filter(inventory=self).order_by('-timestamp')
+        inventory_transactions = InventoryTransaction.get_all().filter(inventory=self).order_by('-timestamp')
         if len(inventory_transactions):
             return inventory_transactions[0].sale_price
         else:
@@ -529,7 +550,7 @@ class Inventory(models.Model):
         return "%s (%i in stock)" % (self.name, self.getQuantityRemaining())
 
 
-class InventoryTransaction(models.Model):
+class InventoryTransaction(LookupModel):
     """Defines the Django model for Inventory Transactions"""
     inventory = models.ForeignKey(Inventory)
     user = models.ForeignKey(User)
@@ -543,7 +564,7 @@ class InventoryTransaction(models.Model):
     def getActiveTransactions():
         """Returns transactions that have remaining stock"""
         # TODO Add ability to filter un-started transactions
-        all_transactions = InventoryTransaction.objects.all()
+        all_transactions = InventoryTransaction.get_all()
         transactions = []
         for transaction in all_transactions:
             if transaction.getQuantityRemaining():
@@ -553,7 +574,7 @@ class InventoryTransaction(models.Model):
     def getQuantitySold(self):
         """Returns the number of items sold, based on the number of
            transactions"""
-        return len(Transaction.objects.filter(inventory_transaction=self))
+        return len(Transaction.get_all().filter(inventory_transaction=self))
 
     def getQuantityRemaining(self):
         """Returns the quantity available to purchase from the
@@ -589,7 +610,7 @@ class InventoryTransaction(models.Model):
         return getMoneyString(self.sale_price, include_sign=False)
 
     def getStockPayments(self):
-        return StockPayment.objects.filter(inventory_transaction=self)
+        return StockPayment.get_all().filter(inventory_transaction=self)
 
     def getAmountPaid(self):
         return self.getStockPayments().aggregate(models.Sum('amount'))['amount__sum'] or 0
@@ -609,7 +630,7 @@ class InventoryTransaction(models.Model):
             self.save()
 
             # Create a new inventory transaction for the new item
-            new_inventory_transaction = InventoryTransaction.objects.get(pk=self.pk)
+            new_inventory_transaction = InventoryTransaction.get_all().get(pk=self.pk)
             new_inventory_transaction.pk = None
             # Update the quantity to reflect the quantity of items being
             # updated
@@ -631,7 +652,7 @@ class InventoryTransaction(models.Model):
             self.save()
 
 
-class Transaction(models.Model):
+class Transaction(LookupModel):
     user = models.ForeignKey(User, related_name='transaction_user')
     amount = models.IntegerField()
     debit = models.BooleanField(default=True)
@@ -682,7 +703,7 @@ class Transaction(models.Model):
         else:
             return self.timestamp.strftime("%d/%m/%y %H:%M")
 
-class StockPaymentTransaction(models.Model):
+class StockPaymentTransaction(LookupModel):
     author = models.ForeignKey(User, related_name='author')
     user = models.ForeignKey(User, related_name='user')
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -700,7 +721,7 @@ class StockPaymentTransaction(models.Model):
         return getMoneyString(self.getAmount(), include_sign=False)
 
     def getStockPayments(self):
-        return StockPayment.objects.filter(stock_payment_transaction=self)
+        return StockPayment.get_all().filter(stock_payment_transaction=self)
 
     def getAmount(self):
         amount = 0
@@ -708,7 +729,7 @@ class StockPaymentTransaction(models.Model):
             amount += stock_payment.amount
         return amount
 
-class StockPayment(models.Model):
+class StockPayment(LookupModel):
     user = models.ForeignKey(User)
     inventory_transaction = models.ForeignKey(InventoryTransaction, null=True)
     stock_payment_transaction = models.ForeignKey(StockPaymentTransaction)
@@ -744,11 +765,11 @@ class StockPayment(models.Model):
         return notes
 
 
-class Token(models.Model):
+class Token(LookupModel):
     user = models.ForeignKey(User)
     token_value = models.CharField(max_length=100)
 
-class Change(models.Model):
+class Change(LookupModel):
     timestamp = models.DateTimeField(auto_now_add=True)
     object_type = models.CharField(max_length=255)
     object_id = models.IntegerField()
