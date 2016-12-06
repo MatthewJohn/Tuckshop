@@ -16,6 +16,10 @@ class Simulation(object):
         self.filter_vars = filter_vars
 
     @property
+    def expire_time(self):
+        return 600
+
+    @property
     def job_key(self):
         raise NotImplementedError
 
@@ -26,7 +30,8 @@ class Simulation(object):
     def start(self):
         if self.job_key not in JOBS:
             JOBS[self.job_key] = self.start_task.apply_async(kwargs={'filter_method': self.filter_method,
-                                                                     'filter_vars': self.filter_vars})
+                                                                     'filter_vars': self.filter_vars},
+                                                             expires=self.expire_time)
         return JOBS[self.job_key]
 
     @staticmethod
@@ -48,8 +53,6 @@ class Simulation(object):
         LOOKUP_OBJECTS['StockPaymentTransaction'] = stock_payment_transactions
         LOOKUP_OBJECTS['Inventory'] = inventory
         LOOKUP_OBJECTS['InventoryTransaction'] = inventory_transactions
-
-
 
 
 class FloatHistorySimulation(Simulation):

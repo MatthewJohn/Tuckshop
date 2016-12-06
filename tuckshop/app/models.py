@@ -415,6 +415,22 @@ class Inventory(LookupModel):
             quantity = self.getCurrentInventoryTransaction().getQuantityRemaining()
         return quantity
 
+    def get_stock_end_date(self):
+        # Determine if there are enough purchases to determine a sensible date
+        if Transaction.get_all().filter(inventory_transaction__inventory=self).count() < 20:
+            return None
+
+        # Obtain inventory transactions for last 3 months
+        inv_transactions = []
+        for transaction in Transaction.get_all().filter(inventory_transaction__inventory=self, timestamp__gt=(datetime.datetime.now() - datetime.timedelta(days=3*365/12))):
+            if transaction.inventory_transaction not in inv_transactions:
+                inv_transactions.append(transaction.inventory_transaction)
+        burn_ratio = 0
+        for inv_transaction in inv_transactions:
+            burn_ratio += inv_transaction.get_burn_ratio()
+        burn_ratio /= len(inv_transactions)
+        return (1 / burn_ratio) * self.getQuantityRemaining(include_all_transactions=True)
+
 
     def getCurrentInventoryTransaction(self, refresh_cache=False):
         cache_key = Inventory.inventory_transaction_cache_key % self.id
@@ -574,6 +590,12 @@ class InventoryTransaction(LookupModel):
             if transaction.getQuantityRemaining():
                 transactions.append(transaction)
         return transactions
+
+    def get_burn_ratio(self):
+        transactions = list(self.transaction_set.order_by('-timestamp'))
+        day_difference = (transactions[0].timestamp - transactions[-1].timestamp).days
+        return (len(transactions) / float(day_difference))
+
 
     def getQuantitySold(self):
         """Returns the number of items sold, based on the number of

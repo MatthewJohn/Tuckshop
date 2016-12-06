@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime, timedelta
+import sys
 
 from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -40,18 +41,22 @@ class Graph(PageBase):
             d = datetime.today() - timedelta(days=days_back)
             sim = FloatHistorySimulation(name='test', filter_method=filter_data, filter_vars={'year': d.year, 'month': d.month, 'day': d.day})
             cel = sim.start()
-            if cel.successful():
-                data = cel.get(timeout=1)
-                float_amount.append(float(data['float_amount']/100.0))
-                total_user_balance.append(float(data['total_user_balance']/100.0))
-                stock_value.append(float(data['stock_value']/100.0))
-                owed.append(float(data['owed']/100.0))
-                sup_float.append(float((((data['float_amount'] - data['total_user_balance']) - data['owed']) + data['stock_value'])/100.0))
-            elif cel.state == 'FAILURE':
+            try:
+                if cel.successful():
+                    data = cel.get(timeout=1)
+                    float_amount.append(float(data['float_amount']/100.0))
+                    total_user_balance.append(float(data['total_user_balance']/100.0))
+                    stock_value.append(float(data['stock_value']/100.0))
+                    owed.append(float(data['owed']/100.0))
+                    sup_float.append(float((((data['float_amount'] - data['total_user_balance']) - data['owed']) + data['stock_value'])/100.0))
+                elif cel.state in ('FAILURE', 'REVOKED'):
+                    sim.delete_cache()
+                    sim.start()
+                    not_enough_data += 1
+                else:
+                    not_enough_data += 1
+            except:
                 sim.delete_cache()
-                sim.start()
-                not_enough_data += 1
-            else:
                 not_enough_data += 1
 
         self.return_vars['graph_data'] = json.dumps([float_amount, total_user_balance, stock_value, owed, sup_float]) if not not_enough_data else None
