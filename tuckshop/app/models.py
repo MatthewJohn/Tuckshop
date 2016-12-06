@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction as DbTransaction
 from enum import Enum
 import ldap
 from decimal import Decimal
@@ -89,6 +89,7 @@ class User(LookupModel):
         """Returns the stock payments objects for credit"""
         return StockPayment.get_all().filter(user=self, inventory_transaction__isnull=True)
 
+    @DbTransaction.atomic
     def payForStock(self, author_user, amount):
         # Ensure that amount is a positive integer (or 0)
         if amount < 0:
@@ -216,6 +217,7 @@ class User(LookupModel):
             balance = int(RedisConnection.get(User.current_credit_cache_key % self.id))
         return balance
 
+    @DbTransaction.atomic
     def addCredit(self, amount, author, affect_float, description=None):
         amount = int(amount)
         if (amount < 0):
@@ -244,10 +246,12 @@ class User(LookupModel):
 
         return current_credit
 
+    @DbTransaction.atomic
     def removeCredit(self, affect_float, amount=None, inventory=None, description=None,
                      verify_price=None, admin_payment=False, author=None):
         if author is None:
             raise TuckshopException('Author must be specified for credit changes')
+
         if (inventory and inventory.getQuantityRemaining() <= 0):
             raise TuckshopException('There are no items in stock')
 
@@ -621,6 +625,7 @@ class InventoryTransaction(LookupModel):
     def getCostRemainingString(self):
         return getMoneyString(self.getRemainingCost(), include_sign=False)
 
+    @DbTransaction.atomic
     def updateSalePrice(self, new_sale_price):
         if self.getQuantitySold():
             # If any of the items have been sold, create a new transaction for the
