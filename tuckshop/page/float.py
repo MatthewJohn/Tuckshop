@@ -6,6 +6,7 @@ from tuckshop.core.utils import getMoneyString
 from tuckshop.app.models import (InventoryTransaction, StockPayment,
                                  Transaction, User, Inventory)
 from tuckshop.core.permission import Permission
+from tuckshop.core.tuck_stats import TuckStats
 
 
 class Float(PageBase):
@@ -24,10 +25,10 @@ class Float(PageBase):
             if inventory_transaction.inventory not in self.return_vars['active_inventorys']:
                 self.return_vars['active_inventorys'].append(inventory_transaction.inventory)
 
-        stock_value = self.getStockValue()
-        unpaid_stock = self.getUnpaidStock()
+        stock_value = TuckStats.get_stock_value()
+        unpaid_stock = TuckStats.get_unpaid_stock()
 
-        float_amount, credit_balance = self.getCurrentFloat()
+        float_amount, credit_balance = TuckStats.get_current_float()
 
         # Calculate what float would be if life were perfect
         float_superficial = float_amount - credit_balance - unpaid_stock + stock_value
@@ -98,47 +99,3 @@ class Float(PageBase):
 
             self.return_vars['info'] = 'Updated cost of %s from %s to %s' % (inventory_transaction_object.inventory.name,
                                                                              getMoneyString(old_cost), getMoneyString(new_cost))
-
-
-    def getCurrentFloat(self):
-        """Gets the current float - amount of money
-           in the tuckshop"""
-        float_amount = 0
-        total_user_balance = 0
-        # Get the total amount payed for stock
-        for stock_payment in StockPayment.objects.all():
-            float_amount -= stock_payment.amount
-
-        # Get the total value of payements for items
-        for transaction in Transaction.objects.filter(affect_float=True):
-            if transaction.debit:
-                float_amount -= transaction.amount
-            else:
-                float_amount += transaction.amount
-
-        # Adjust float based on user's current credit
-        for user in User.objects.all():
-            total_user_balance += user.getCurrentCredit()
-
-        return float_amount, total_user_balance
-
-    def getStockValue(self):
-        """Returns the current sale value of all stock"""
-        stock_value = 0
-        for item in Inventory.objects.all():
-            stock_value += item.getStockValue()
-        return stock_value
-
-    def getUnpaidStock(self):
-        """Returns the amount owed for stock"""
-        owed_amount = 0
-
-        # Iterate over users, aggregating the total amounts
-        # owed for stock
-        for user in User.objects.all():
-            owed_amount += user.getTotalOwed()
-
-            # Remove the amount that is present as stock credit
-            owed_amount -= user.getStockCreditValue()
-
-        return owed_amount
