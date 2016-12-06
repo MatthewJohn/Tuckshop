@@ -25,6 +25,7 @@ class Graph(PageBase):
         def filter_data(filter_vars, transactions, users, stock_payments, stock_payment_transactions, inventory_transactions, inventory):
             import datetime
             transactions = transactions.filter(timestamp__lt=datetime.date(filter_vars['year'], filter_vars['month'], filter_vars['day']))
+            inventory_transactions = inventory_transactions.filter(timestamp__lt=datetime.date(filter_vars['year'], filter_vars['month'], filter_vars['day']))
             stock_payments = stock_payments.filter(timestamp__lt=datetime.date(filter_vars['year'], filter_vars['month'], filter_vars['day']))
             stock_payment_transactions = stock_payment_transactions.filter(timestamp__lt=datetime.date(filter_vars['year'], filter_vars['month'], filter_vars['day']))
             return filter_vars, transactions, users, stock_payments, stock_payment_transactions, inventory_transactions, inventory
