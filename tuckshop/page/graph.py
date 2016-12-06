@@ -8,7 +8,7 @@ from tuckshop.core.tuckshop_exception import TuckshopException
 from tuckshop.core.utils import getMoneyString
 from tuckshop.app.models import (InventoryTransaction, StockPayment,
                                  Transaction, User, Inventory)
-from tuckshop.core.simulation import HistorySimulation
+from tuckshop.core.simulation import FloatHistorySimulation
 from tuckshop.core.permission import Permission
 
 
@@ -38,7 +38,7 @@ class Graph(PageBase):
         sup_float = ['Superficial Float']
         for days_back in list(reversed(range(1, 29))):
             d = datetime.today() - timedelta(days=days_back)
-            sim = HistorySimulation(name='test', filter_method=filter_data, filter_vars={'year': d.year, 'month': d.month, 'day': d.day})
+            sim = FloatHistorySimulation(name='test', filter_method=filter_data, filter_vars={'year': d.year, 'month': d.month, 'day': d.day})
             cel = sim.start()
             if cel.successful():
                 data = cel.get(timeout=1)

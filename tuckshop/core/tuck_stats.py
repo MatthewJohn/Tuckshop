@@ -28,7 +28,7 @@ class TuckStats(object):
         return float_amount, total_user_balance
 
     @staticmethod
-    def get_stock_name():
+    def get_stock_value():
         """Returns the current sale value of all stock"""
         stock_value = 0
         for item in Inventory.get_all():
