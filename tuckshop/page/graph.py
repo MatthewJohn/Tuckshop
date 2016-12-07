@@ -37,7 +37,7 @@ class Graph(PageBase):
         stock_value = ['Stock Value']
         owed = ['Owed Stock']
         sup_float = ['Superficial Float']
-        for days_back in list(reversed(range(1, 29))):
+        for days_back in list(reversed(range(1, 340))):
             d = datetime.today() - timedelta(days=days_back)
             sim = FloatHistorySimulation(name='test', filter_method=filter_data, filter_vars={'year': d.year, 'month': d.month, 'day': d.day})
             cel = sim.start()
