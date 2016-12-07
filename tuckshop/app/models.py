@@ -422,14 +422,60 @@ class Inventory(LookupModel):
 
         # Obtain inventory transactions for last 3 months
         inv_transactions = []
+        transaction_count = 0
         for transaction in Transaction.get_all().filter(inventory_transaction__inventory=self, timestamp__gt=(datetime.datetime.now() - datetime.timedelta(days=3*365/12))):
             if transaction.inventory_transaction not in inv_transactions:
                 inv_transactions.append(transaction.inventory_transaction)
-        burn_ratio = 0
+                transaction_count += transaction.inventory_transaction.getQuantitySold()
+
+        # If there are not enough transactions, obtain more from prevous inventory transasctions
+        if transaction_count < 15:
+            for inventory_transaction in InventoryTransaction.get_all().filter(inventory=self).order_by('-timestamp'):
+                if inventory_transaction not in inv_transactions:
+                    inv_transactions.append(inventory_transaction)
+                    transaction_count += inventory_transaction.getQuantitySold()
+
+                if transaction_count >=15:
+                    break
+            else:
+                return None 
+
+        # Determine average stock depletion duration and mean burn rate
+        stock_dep_mean = 0
+        burn_mean = 0
+        dep_transactions = 0
+        burn_transactions = 0
         for inv_transaction in inv_transactions:
-            burn_ratio += inv_transaction.get_burn_ratio()
-        burn_ratio /= len(inv_transactions)
-        return (1 / burn_ratio) * self.getQuantityRemaining(include_all_transactions=True)
+            dep_duration = inv_transaction.get_dep_duration()
+            if dep_duration is not None:
+                stock_dep_mean += inv_transaction.get_dep_duration()
+                dep_transactions += 1
+
+            burn_rate = inv_transaction.get_burn_rate()
+            if burn_rate is not None:
+                burn_mean += (burn_rate / (60 * 24))
+                burn_transactions += 1
+
+        stock_dep_mean /= dep_transactions
+        burn_mean /= burn_transactions
+        if stock_dep_mean:
+            stock_dep_rate = (1 / stock_dep_mean) * self.getQuantityRemaining(include_all_transactions=True)
+        else:
+            stock_dep_rate = None
+        if burn_mean:
+            stock_burn_rate = burn_mean * self.getQuantityRemaining(include_all_transactions=True)
+        else:
+            stock_burn_rate = None
+        return stock_dep_rate, stock_burn_rate
+
+        # For last 3 inv transactions, determine predicted and actual run out date, then create multiplier
+
+        # Determine burn rate corelation, to determine if accelerating or deccelerating
+
+        # Determine burn rate aceleration, using all transactions
+
+        # Determine if end date calculated by the mean burn rate, after being updated from the burn rate acceleration,
+        # is too different from the mean burn rate and average stock depletion duration
 
 
     def getCurrentInventoryTransaction(self, refresh_cache=False):
@@ -591,11 +637,29 @@ class InventoryTransaction(LookupModel):
                 transactions.append(transaction)
         return transactions
 
-    def get_burn_ratio(self):
+    def get_dep_duration(self):
         transactions = list(self.transaction_set.order_by('-timestamp'))
-        day_difference = (transactions[0].timestamp - transactions[-1].timestamp).days
-        return (len(transactions) / float(day_difference))
+        if len(transactions) < 2:
+            return None
 
+        day_difference = (transactions[0].timestamp - transactions[-1].timestamp).days
+        if day_difference:
+            return (len(transactions) / float(day_difference))
+        else:
+            return 0
+
+    def get_burn_rate(self):
+        date = self.timestamp
+        average_time_mins = 0
+        itx = 0
+        for transaction in Transaction.get_all().filter(inventory_transaction=self).order_by('timestamp'):
+            itx += 1
+            average_time_mins += ((transaction.timestamp - date).total_seconds() / 60.0)
+            date = transaction.timestamp
+        if itx:
+            return (float(average_time_mins) / itx)
+        else:
+            return None
 
     def getQuantitySold(self):
         """Returns the number of items sold, based on the number of
