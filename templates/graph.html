@@ -13,7 +13,11 @@
                             var chart = c3.generate({
                                 bindto: '#chart',
                                 data: {
-                                  columns: JSON.parse('{{ graph_data }}')
+                                  columns: JSON.parse('{{ graph_data }}'),
+                                  axes: {
+                                    Float: 'y2',
+                                    'Superficial Float': 'y2'
+                                  }
                                 },
                                 axis: {
                                   y: {
@@ -23,6 +27,9 @@
                                     tick: {
                                       format: d3.format("&pound;,")
                                     }
+                                  },
+                                  y2: {
+                                    show: true
                                   }
                                 }
                             });
