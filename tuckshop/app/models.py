@@ -53,9 +53,9 @@ class User(LookupModel):
         elif not ('TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']):
             # Obtain information from LDAP
             ldap_obj = ldap.initialize('ldap://%s:389' % Config.LDAP_SERVER())
-            dn = 'uid=%s,ou=People,dc=example,dc=com' % self.uid
+            dn = 'uid=%s,%s' % (self.uid, Config.LDAP_USER_BASE())
             ldap_obj.simple_bind_s()
-            res = ldap_obj.search_s('ou=People,dc=example,dc=com', ldap.SCOPE_ONELEVEL,
+            res = ldap_obj.search_s(Config.LDAP_USER_BASE(), ldap.SCOPE_ONELEVEL,
                                     'uid=%s' % self.uid, ['mail', 'givenName'])
 
             if (not res):
