@@ -35,7 +35,7 @@ def login(username, password):
     else:
         # Otherwise authenticate against LDAP server
         ldap_obj = ldap.initialize('ldap://%s:389' % Config.LDAP_SERVER())
-        dn = 'uid=%s,ou=People,dc=example,dc=com' % username
+        dn = 'uid=%s,%s' % (username, Config.LDAP_USER_BASE())
         try:
             # Attempt to bind to LDAP
             ldap_obj.simple_bind_s(dn, password)
