@@ -6,6 +6,7 @@ class Permission(Enum):
     FLOAT_ACCESS = 1
     REVIEW_SHARED_ACCOUNTS = 2
     ACCESS_TOUCH_VIEW = 3
+    ACCESS_CREDIT_PAGE = 4
 
     @staticmethod
     def getDict(return_value):

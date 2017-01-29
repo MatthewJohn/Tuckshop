@@ -4,14 +4,15 @@
                         <div class="col-md-12">
                             <h2>Permissions</h2>
                             <table class="table">
-                                <tr><th>Username</th><th>Admin</th><th>View Float</th><th>Review Shared Accounts</th><th></th></tr>
+                                <tr><th>Username</th><th>Access Credit Page</th><th>Review Shared Accounts</th><th>View Float</th><th>Admin</th><th></th></tr>
                                 {% for user in users %}
                                 <tr>
                                     <td>{{ user.uid }}</td>
-                                    <td><input type="checkbox" value="1" name="ADMIN" form="update_permissions_{{ user.uid }}" {% if user.isAdmin %}checked{% endif %}/></td>
-                                    <td><input type="checkbox" value="1" name="FLOAT_ACCESS" form="update_permissions_{{ user.uid }}" {% if user.checkPermission(permissions['FLOAT_ACCESS']) %}checked{% endif %}/></td>
+                                    <td><input type="checkbox" value="1" name="ACCESS_CREDIT_PAGE" form="update_permissions_{{ user.uid }}"  {% if user.checkPermission(permissions['ACCESS_CREDIT_PAGE']) %}checked{% endif %}/></td>
                                     <td><input type="checkbox" value="1" name="REVIEW_SHARED_ACCOUNTS" form="update_permissions_{{ user.uid }}"  {% if user.checkPermission(permissions['REVIEW_SHARED_ACCOUNTS']) %}checked{% endif %}/></td>
-                                    <td><input type="submit" form="update_permissions_{{ user.uid }}" class="btn btn-warning btn-xs" value="update" /></td>
+                                    <td><input type="checkbox" value="1" name="FLOAT_ACCESS" form="update_permissions_{{ user.uid }}" {% if user.checkPermission(permissions['FLOAT_ACCESS']) %}checked{% endif %}/></td>
+                                     <td><input type="checkbox" value="1" name="ADMIN" form="update_permissions_{{ user.uid }}" {% if user.isAdmin %}checked{% endif %}/></td>
+                                     <td><input type="submit" form="update_permissions_{{ user.uid }}" class="btn btn-warning btn-xs" value="update" /></td>
                                 </tr>
                                 {% endfor %}
                             </table>

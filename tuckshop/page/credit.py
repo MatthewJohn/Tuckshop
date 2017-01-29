@@ -4,6 +4,8 @@ from tuckshop.page.page_base import PageBase, VariableVerificationTypes
 from tuckshop.core.config import Config
 from tuckshop.app.models import Inventory, User
 from tuckshop.core.tuckshop_exception import TuckshopException
+from tuckshop.core.permission import Permission
+
 
 class Credit(PageBase):
     """Class for displaying the credit page"""
@@ -11,7 +13,7 @@ class Credit(PageBase):
     NAME = 'Credit'
     TEMPLATE = 'credit'
     REQUIRES_AUTHENTICATION = True
-    PERMISSION = None
+    PERMISSION = Permission.ACCESS_CREDIT_PAGE
     MENU_ORDER = 1
     URL = '/credit'
 
