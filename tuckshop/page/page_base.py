@@ -283,7 +283,9 @@ class PageBase(object):
     def requiresPermission(self):
         """Determines if the page requies admin permissions and
            whether the user has admin permissions"""
-        if self.permission and not self.getCurrentUserObject().checkPermission(self.permission):
+        if (self.permission and
+                ((not self.getCurrentUserObject()) or
+                (not self.getCurrentUserObject().checkPermission(self.permission)))):
             return True
         else:
             return False
