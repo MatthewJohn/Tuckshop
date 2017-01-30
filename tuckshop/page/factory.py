@@ -33,6 +33,8 @@ class Factory(object):
         page_object = None
         if name == 'credit' or name == '':
             page_object = Credit(request_handler)
+            if page_object.requiresPermission():
+                page_object = PersonalHistory(request_handler)
         elif name == 'login':
             page_object = Login(request_handler)
         elif name == 'logout':

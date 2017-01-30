@@ -40,6 +40,7 @@
                             <div class="alert alert-info" role="info">All stock has been paid</div>
                             {% endif %}
                             {% for user in unpaid_users %}
+                            <hr />
                             <div class="col-md-12">
                                 <h3>{{ user.uid }}</h3>
                                 {% if user.getStockCreditValue() %}<span style="color: red">User has {{ user.getStockCreditValue(string=True, none_on_zero=True) }} in stock credit. This will be used during the next payment.</span>
