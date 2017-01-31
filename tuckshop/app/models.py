@@ -11,6 +11,7 @@ from tuckshop.core.redis_connection import RedisConnection
 from tuckshop.core.utils import getMoneyString
 from tuckshop.core.image import Image
 from tuckshop.core.skype import Skype
+from tuckshop.core.permission import Permission
 
 
 LOOKUP_OBJECTS = {
@@ -33,10 +34,18 @@ class LookupModel(models.Model):
     class Meta:
         abstract = True
 
+def default_permission():
+    permission = 0
+    for permission_enum in Permission.get_default_permission():
+        permission_bit = 1 << permission_enum.value
+        permission &= ~permission_bit
+    return permission
+
 class User(LookupModel):
+
     uid = models.CharField(max_length=10)
     admin = models.BooleanField(default=False)
-    permissions = models.IntegerField(default=0)
+    permissions = models.IntegerField(default=default_permission())
     timestamp = models.DateTimeField(auto_now_add=True)
     shared = models.BooleanField(default=False)
     shared_name = models.CharField(max_length=255, null=True)
