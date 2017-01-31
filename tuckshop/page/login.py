@@ -1,3 +1,5 @@
+from os import environ
+
 from tuckshop.page.page_base import PageBase, InvalidPostVariable
 from tuckshop.page.redirect import Redirect
 from tuckshop.core.utils import login
@@ -44,6 +46,10 @@ class Login(PageBase):
     def processPage(self):
         if self.redirect:
             self.redirect.processPage()
+        if 'TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']:
+            self.return_vars['warning'] = ('Tuckshop is in development mode.<br />'
+                                           'Login using any username with password \'password\'.<br />'
+                                           'The username for the default admin account is \'aa\'<br />')
 
     def processHeaders(self):
         if self.redirect:
