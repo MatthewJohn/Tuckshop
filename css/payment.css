@@ -7,6 +7,13 @@ body
   height: 100%;
 }
 
+.small-logo
+{
+  background-image: url(http://www.theartistevolution.com/wp-content/uploads/2012/12/HiRes.png);
+  background-repeat: no-repeat;
+  background-size: 50px;
+}
+
 #background-image
 {
   background-image: url(http://www.theartistevolution.com/wp-content/uploads/2012/12/HiRes.png);
