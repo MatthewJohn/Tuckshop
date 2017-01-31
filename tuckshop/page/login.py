@@ -47,9 +47,9 @@ class Login(PageBase):
         if self.redirect:
             self.redirect.processPage()
         if 'TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL']:
-            self.return_vars['warning'] = ('Tuckshop is in development mode.<br />'
-                                           'Login using any username with password \'password\'.<br />'
-                                           'The username for the default admin account is \'aa\'<br />')
+            self.return_vars['info'] = ('Tuckshop is in development mode.<br />'
+                                        'Login using any username with password \'password\'.<br />'
+                                        'The username for the default admin account is \'aa\'<br />')
 
     def processHeaders(self):
         if self.redirect:
