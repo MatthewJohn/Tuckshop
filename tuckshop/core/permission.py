@@ -15,3 +15,7 @@ class Permission(Enum):
         for name, member in Permission.__members__.items():
             dictionary[name] = member.value if return_value else member
         return dictionary
+
+    @staticmethod
+    def get_default_permission():
+        return [Permission.ACCESS_CREDIT_PAGE, Permission.ACCESS_STOCK_PAGE]
