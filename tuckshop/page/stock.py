@@ -12,7 +12,7 @@ class Stock(PageBase):
     NAME = 'Stock'
     TEMPLATE = 'stock'
     REQUIRES_AUTHENTICATION = True
-    PERMISSION = None
+    PERMISSION = Permission.ACCESS_STOCK_PAGE
     MENU_ORDER = 3
     URL = '/stock'
 
