@@ -7,8 +7,11 @@ from tuckshop.core.permission import Permission
 def set_default_permissions(apps, schema_editor):
     User = apps.get_model('app', 'User')
     for row in User.objects.all():
-        row.addPermission(Permission.ACCESS_CREDIT_PAGE)
-        row.addPermission(Permission.ACCESS_STOCK_PAGE)
+        permission_bit = 1 << Permission.ACCESS_CREDIT_PAGE.value
+        row.permissions |= permission_bit
+        permission_bit = 1 << Permission.ACCESS_STOCK_PAGE.value
+        row.permissions |= permission_bit
+        row.save()
 
 class Migration(migrations.Migration):
 
