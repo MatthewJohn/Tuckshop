@@ -50,6 +50,7 @@ class User(LookupModel):
     shared = models.BooleanField(default=False)
     shared_name = models.CharField(max_length=255, null=True)
     skype_id = models.CharField(max_length=64, null=True)
+    touchscreen = models.BooleanField(default=False)
 
     current_credit_cache_key = 'User_%s_credit'
 
