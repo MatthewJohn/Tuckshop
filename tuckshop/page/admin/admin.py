@@ -26,7 +26,7 @@ class Admin(AdminBase):
                 self.return_vars['unpaid_users'].append(user)
 
     def processPost(self):
-        action = self.getPostVariable(name='action', possible_values=['pay_stock', 'credit', 'debit'])
+        action = self.getPostVariable(name='action', possible_values=['pay_stock', 'credit', 'debit', 'update_user'])
         uid = self.getPostVariable(name='uid', var_type=str)
         user = User.objects.get(uid=uid)
         if action == 'pay_stock':
@@ -63,3 +63,10 @@ class Admin(AdminBase):
                                   affect_float=affect_float)
                 self.return_vars['info'] = 'Removed %s from %s' % (getMoneyString(amount, include_sign=False),
                                                                    user.uid)
+        elif action == 'update_user':
+            skype_id = self.getPostVariable(name='skype_id', var_type=str, default=None, set_default=True)
+            touchscreen = self.getPostVariable(name='touchscreen', var_type=bool, default=False, set_default=True)
+            user.skype_id = skype_id if skype_id != '' else None
+            user.touchscreen = touchscreen
+            user.save()
+

@@ -7,13 +7,15 @@
                         <div class="col-md-12">
                             <h2>Users</h2>
                             <table class="table">
-                                <tr><th>Username</th><th>Admin Status</th><th>Balance</th><th>Adjust Blanace</th></tr>
+                                <tr><th>Username</th><th>Skype ID</th><th>Touchscreen</th><th>Update User</th><th>Balance</th><th>Adjust Blanace</th></tr>
                                 {% for user in users %}
                                 <tr>
                                     <form action="/admin" method="post" id="credit_change_{{ user.uid }}" onkeypress="return event.keyCode != 13;">
                                         <input type="hidden" name="uid" value="{{ user.uid }}" />
                                         <td>{{ user.uid }}</td>
-                                        <td><span class="glyphicon glyphicon-{% if user.admin %}ok{% else %}ban{% endif %}-circle"></span>
+                                        <td><input type="text" name="skype_id" form="update_{{ user.uid }}" value="{% if user.skype_id %}{{ user.skype_id }}{% endif %}" /></td>
+                                        <td><input type="checkbox" name="touchscreen" value="1" form="update_{{ user.uid }}" {% if user.touchscreen %}checked{% endif %} /></td>
+                                        <td><input type="submit" form="update_{{ user.uid }}" class="btn btn-warning btn-xs" value="Update User" /></td>
                                         <td>{{ user.getCreditString() }}</td>
                                         <td>
                                             <div class="input-group">
@@ -77,6 +79,12 @@
                                 </form>
                                 <button class="btn btn-info" onclick="confirmPayUser('{{ user.uid }}', document.getElementById('pay_amount_{{ user.uid }}').value)">Pay {{ user.uid }}</button>
                             </div>
+                            {% endfor %}
+                            {% for user in users %}
+                            <form action="/admin" method="post" id="update_{{ user.uid }}">
+                                <input type="hidden" name="action" value="update_user" />
+                                <input type="hidden" name="uid" value="{{ user.uid }}" />
+                            </form>
                             {% endfor %}
                         </div>
                     </div>
