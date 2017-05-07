@@ -12,7 +12,7 @@ class Touch(PageBase):
 
 
     def processPage(self):
-        self.return_vars['users'] = User.objects.filter(shared=False, skype_id__isnull=False).order_by('uid')
+        self.return_vars['users'] = User.objects.filter(shared=False, touchscreen=True).order_by('uid')
         self.return_vars['items'] = []
         # Remove 
         for item in Inventory.getAvailableItemsByPopularity(include_out_of_stock=False):
