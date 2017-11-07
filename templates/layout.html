@@ -11,13 +11,13 @@
     </head>
     <body>
         <div class="container-fluid">
-            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12"{% if debug %} style="background-color: black"{% endif %}>
                 <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
                     <footer>
                         {{ page_object.getMenu() }}
                     </footer>
                 </div>
-                <div class="col-lg-6 col-md-6 hidden-sm hidden-xs"></div>
+                <div class="col-lg-6 col-md-6 hidden-sm hidden-xs">{% if debug %}<h3 style="color: white; margin: 5px 0 0 0;">DEVELOPMENT INSTANCE</h3>{% endif %}</div>
             </div>
             <div id="padder-box" class="col-md-2 hidden-sm hidden-xs small-logo"></div>
             <div class="col-lg-8 col-md-8 col-sm-12 col-xs-12">

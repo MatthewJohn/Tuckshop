@@ -38,3 +38,7 @@ class Config(object):
     @staticmethod
     def SKYPE_CREDENTIALS():
         return (environ['SKYPE_USERNAME'], environ['SKYPE_PASS']) if 'SKYPE_USERNAME' in environ and 'SKYPE_PASS' in environ else None
+
+    @staticmethod
+    def DEVEL():
+        return True if 'TUCKSHOP_DEVEL' in environ and environ['TUCKSHOP_DEVEL'] else False

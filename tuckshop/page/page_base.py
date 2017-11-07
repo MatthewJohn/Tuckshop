@@ -88,7 +88,8 @@ class PageBase(object):
                 'warning': None,
                 'info': None,
                 'app_name': Config.APP_NAME(),
-                'page_name': self.name
+                'page_name': self.name,
+                'debug': Config.DEVEL()
             }
 
     @property
