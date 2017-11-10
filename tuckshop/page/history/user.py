@@ -16,8 +16,19 @@ class User(HistoryBase):
     SUB_MENU_ORDER = 6
     SUB_MENU = HistoryBase
 
+    @property
+    def pagination_itx(self):
+        """URL part itx, that takes into account UID"""
+        return 3
+
+    def __init__(self, *args, **kwargs):
+        super(User, self).__init__(*args, **kwargs)
+        if len(User.getUrlParts(self.request_handler)) >= 3:
+            uid = User.getUrlParts(self.request_handler)[2]
+            self.URL = User.URL + '/' + uid
+
     def getTransactionHistory(self):
-        if len(User.getUrlParts(self.request_handler)) == 3:
+        if len(User.getUrlParts(self.request_handler)) >= 3:
             uid = User.getUrlParts(self.request_handler)[2]
             users = UserModel.objects.filter(uid=uid)
             if not len(users):
