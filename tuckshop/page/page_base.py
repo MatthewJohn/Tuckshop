@@ -125,6 +125,12 @@ class PageBase(object):
         else:
             return self.request_handler.path
 
+    def stripHtmlCharacters(self, value):
+        value = value.replace('"', '\'')
+        for i in ['<', '>', '&#x3C;', '&#x3E;']:
+            value = value.replace(i, '')
+        return value
+
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
                         special=[], message=None, max_length=None):
@@ -151,6 +157,9 @@ class PageBase(object):
             value = str(self.post_vars[name].decode('iso-8859-1').encode('utf8'))
         else:
             value = self.post_vars[name]
+
+        # Strip HTML tags
+        value = self.stripHtmlCharacters(value)
 
         # If a type has not been specified and a 'special' case has been,
         # set the var_type to an appropriate value.
