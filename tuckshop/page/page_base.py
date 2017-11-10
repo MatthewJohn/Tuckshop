@@ -32,6 +32,10 @@ class AdminPermissionRequired(TuckshopException):
     pass
 
 
+class CrossDomainPostRequest(TuckshopException):
+    pass
+
+
 class VariableVerificationTypes(object):
     """Provides methods of passing verification
        types to the getPostVariable method"""
@@ -353,6 +357,9 @@ class PageBase(object):
         if post_request:
             self.attemptFunction(self.getPostVariables)
 
+            # Ensure referer is from the same domain
+            self.checkReferer()
+
             # Perform the post request handling in a database
             # transaction, to ENSURE data entegrity
             with transaction.atomic():
@@ -419,6 +426,14 @@ class PageBase(object):
 
         for field in form.keys():
             self.post_vars[field] = form[field].value
+
+    def checkReferer(self):
+        """Ensure referer and host header are the same for POST requests"""
+        host = self.request_handler.headers['host'] if 'host' in self.request_handler.headers else ''
+        referer = self.request_handler.headers['referer'] if 'referer' in self.request_handler.headers else ''
+        ref_domain = re.match(r'https?://([^\/]+?)/.*', referer).group(1) or ''
+        if host != ref_domain or host == '' or ref_domain == '':
+            raise CrossDomainPostRequest('Cross domain POST request')
 
     def getSessionId(self):
         if not self.session_id:
