@@ -137,7 +137,7 @@ class PageBase(object):
 
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
-                        special=[], message=None, max_length=None):
+                        special=[], message=None, max_length=None, strip_html=True):
         """Performs various checks of post vars and returns the value if checks pass"""
         message = message if message else "%s does not conform" % name
         message = "Error (%%s): %s" % message
@@ -163,7 +163,8 @@ class PageBase(object):
             value = self.post_vars[name]
 
         # Strip HTML tags
-        value = self.stripHtmlCharacters(value)
+        if strip_html:
+            value = self.stripHtmlCharacters(value)
 
         # If a type has not been specified and a 'special' case has been,
         # set the var_type to an appropriate value.

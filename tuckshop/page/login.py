@@ -32,8 +32,8 @@ class Login(PageBase):
             username = None
             password = None
             try:
-                username = self.getPostVariable(name='username', var_type=str, regex='[a-zA-Z0-9]+').lower()
-                password = self.getPostVariable(name='password', var_type=str)
+                username = self.getPostVariable(name='username', var_type=str, regex='[a-zA-Z0-9]+', strip_html=False).lower()
+                password = self.getPostVariable(name='password', var_type=str, strip_html=False)
             except InvalidPostVariable:
                 return
 
