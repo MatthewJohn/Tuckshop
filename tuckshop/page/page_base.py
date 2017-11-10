@@ -32,6 +32,10 @@ class AdminPermissionRequired(TuckshopException):
     pass
 
 
+class CrossDomainPostRequest(TuckshopException):
+    pass
+
+
 class VariableVerificationTypes(object):
     """Provides methods of passing verification
        types to the getPostVariable method"""
@@ -125,6 +129,12 @@ class PageBase(object):
         else:
             return self.request_handler.path
 
+    def stripHtmlCharacters(self, value):
+        value = value.replace('"', '\'')
+        for i in ['<', '>', '&#x3C;', '&#x3E;']:
+            value = value.replace(i, '')
+        return value
+
     def getPostVariable(self, name, var_type=None, regex=None, default=None,
                         set_default=False, custom_method=None, possible_values=None,
                         special=[], message=None, max_length=None):
@@ -151,6 +161,9 @@ class PageBase(object):
             value = str(self.post_vars[name].decode('iso-8859-1').encode('utf8'))
         else:
             value = self.post_vars[name]
+
+        # Strip HTML tags
+        value = self.stripHtmlCharacters(value)
 
         # If a type has not been specified and a 'special' case has been,
         # set the var_type to an appropriate value.
@@ -344,6 +357,9 @@ class PageBase(object):
         if post_request:
             self.attemptFunction(self.getPostVariables)
 
+            # Ensure referer is from the same domain
+            self.checkReferer()
+
             # Perform the post request handling in a database
             # transaction, to ENSURE data entegrity
             with transaction.atomic():
@@ -410,6 +426,14 @@ class PageBase(object):
 
         for field in form.keys():
             self.post_vars[field] = form[field].value
+
+    def checkReferer(self):
+        """Ensure referer and host header are the same for POST requests"""
+        host = self.request_handler.headers['host'] if 'host' in self.request_handler.headers else ''
+        referer = self.request_handler.headers['referer'] if 'referer' in self.request_handler.headers else ''
+        ref_domain = re.match(r'https?://([^\/]+?)/.*', referer).group(1) or ''
+        if host != ref_domain or host == '' or ref_domain == '':
+            raise CrossDomainPostRequest('Cross domain POST request')
 
     def getSessionId(self):
         if not self.session_id:
