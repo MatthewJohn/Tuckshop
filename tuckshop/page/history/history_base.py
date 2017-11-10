@@ -14,6 +14,11 @@ class HistoryBase(PageBase):
         """Returns the transaction values to be displayed in the history page"""
         raise NotImplementedError
 
+    @property
+    def pagination_itx(self):
+        """Pagination URL parts itx"""
+        return 2
+
     def processPage(self):
         """Obtains required variables for history page"""
         transaction_history = self.getTransactionHistory()
@@ -22,9 +27,9 @@ class HistoryBase(PageBase):
         if len(transaction_history) > Config.TRANSACTION_PAGE_SIZE():
             # Attempt to retrieve page number from URL, default to 1
             page_number = 1
-            if len(url_parts) == 3:
+            if len(url_parts) == (self.pagination_itx + 1):
                 try:
-                    page_number = int(url_parts[2])
+                    page_number = int(url_parts[self.pagination_itx])
                 except ValueError:
                     pass
 
