@@ -12,6 +12,7 @@ import json
 import re
 import traceback
 from django.db import transaction
+from raven import Client
 
 from tuckshop.core.config import Config
 from tuckshop.core.tuckshop_exception import TuckshopException
@@ -332,12 +333,15 @@ class PageBase(object):
         self.request_handler.wfile.write(unicode(template.render(**self.return_vars)).encode('latin1'))
 
     def attemptFunction(self, fun):
+        client = Client('http://ec8bd0585c2640c0881c3ff84320226d:d574725c931944c79ea0b056d05db850@localhost:8090/2')
         try:
             fun()
         except TuckshopException, e:
+            client.captureException()
             self.return_vars['error'] = str(e)
             print 'Handled Error: %s' % str(e)
         except Exception, e:
+            client.captureException()
             self.return_vars['error'] = ('An internal server error occurred. '
                                          'Please contact a member of the TuckShop team immediately.')
             print 'Unhandled error: %s' % str(e)
@@ -349,34 +353,39 @@ class PageBase(object):
 
     def processRequest(self, post_request):
         """Handles requests by the web server"""
-        # Ensure that authentication has been checked before
-        # performing any further checks
-        self.checkAuthentication()
+        client = Client('http://ec8bd0585c2640c0881c3ff84320226d:d574725c931944c79ea0b056d05db850@localhost:8090/2')
+        try:
+            # Ensure that authentication has been checked before
+            # performing any further checks
+            self.checkAuthentication()
 
-        # If it was post request, process the POST variables and
-        # process POST request
-        if post_request:
-            self.attemptFunction(self.getPostVariables)
+            # If it was post request, process the POST variables and
+            # process POST request
+            if post_request:
+                self.attemptFunction(self.getPostVariables)
 
-            # Ensure referer is from the same domain
-            self.checkReferer()
+                # Ensure referer is from the same domain
+                self.checkReferer()
 
-            # Perform the post request handling in a database
-            # transaction, to ENSURE data entegrity
-            with transaction.atomic():
-                self.attemptFunction(self.processPost)
-                self.postRedirect()
+                # Perform the post request handling in a database
+                # transaction, to ENSURE data entegrity
+                with transaction.atomic():
+                    self.attemptFunction(self.processPost)
+                    self.postRedirect()
 
-        else:
-            # Process page to determine page content
-            self.attemptFunction(self.processPage)
+            else:
+                # Process page to determine page content
+                self.attemptFunction(self.processPage)
 
-        # Process headers
-        self.processHeaders()
+            # Process headers
+            self.processHeaders()
 
-        if not post_request:
-            # Process template
-            self.processTemplate()
+            if not post_request:
+                # Process template
+                self.processTemplate()
+        except:
+            client.captureException()
+            raise
 
     def processPage(self):
         raise NotImplementedError
